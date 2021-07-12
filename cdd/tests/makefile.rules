@@ -1,0 +1,7 @@
+test: default
+	./testbf 0
+	./testbf 1
+	./testbf 10
+	./testcdd 0
+	./testcdd 1
+	./testcdd 10

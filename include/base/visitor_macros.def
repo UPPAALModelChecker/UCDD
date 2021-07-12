@@ -1,0 +1,21 @@
+#define GENERATE_WRITE_VISITOR(class_name, par_name, accept_stmts) \
+template <typename Visitor> \
+struct accepts_writer<class_name, Visitor> : std::true_type { \
+static void accept(const class_name &par_name, Visitor& v) { \
+static_assert(is_visitor<Visitor>::value, "Please implement visitor pattern"); \
+accept_stmts \
+} \
+}; 
+
+#define GENERATE_READ_VISITOR(class_name, par_name, accept_stmts) \
+template <typename Visitor> \
+struct accepts_reader<class_name, Visitor> : std::true_type { \
+static void accept(class_name &par_name, Visitor& v) { \
+static_assert(is_visitor<Visitor>::value, "Please implement visitor pattern"); \
+accept_stmts \
+} \
+};
+
+#define GENERATE_READ_WRITE_VISITOR(class_name, par_name, accept_stmts) \
+  GENERATE_WRITE_VISITOR(class_name, par_name, accept_stmts) \
+  GENERATE_READ_VISITOR(class_name, par_name, accept_stmts)

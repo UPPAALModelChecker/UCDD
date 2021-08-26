@@ -138,7 +138,7 @@ message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
 set(COMPILER_STRING "Compiled using ${OCDD_OPTIONS}") # pass the compiler options string to OCDD
 
-set(MODULES base debug cdd dbm)
+set(MODULES base debug hash cdd dbm demo-program)
 
 if (TESTING)
   enable_testing()

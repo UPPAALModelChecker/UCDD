@@ -252,40 +252,15 @@ static void test(const char* name, TestFunction f, size_t size)
 
 int main(int argc, char* argv[])
 {
-    uint32_t n;
-    printf("new program!");
-    
-    // numer of clocks
-    n = 2;
+    uint32_t number_of_clocks;
+    number_of_clocks = 2;
+    printf("new program again!\n");
 
-    cdd_init(100000, 10000, 10000);
-    cdd_add_clocks(n);
+    cdd_init(100000,10000,10000);
 
-    for (uint32_t j = 1; j <= 10; ++j) {
-        uint32_t DBM_sofar = allDBMs;
-        uint32_t good_sofar = goodDBMs;
-        uint32_t passDBMs, passGood;
-        printf("*** Pass %d of 10 ***\n", j);
-        for (uint32_t i = 1; i <= n; ++i) /* min dim = 1 */
-        {
-            test("test_conversion  ", test_conversion, i);
-            test("test_intersection", test_intersection, i);
-            test("test_apply_reduce", test_apply_reduce, i);
-            test("test_reduce      ", test_reduce, i);
-        }
-        passDBMs = allDBMs - DBM_sofar;
-        passGood = goodDBMs - good_sofar;
-        printf("*** Passed(%d) for %d generated DBMs, %d (%d%%) non trivial\n", j, passDBMs,
-               passGood, passDBMs ? (100 * passGood) / passDBMs : 0);
-    }
+    cdd cdd1, cdd2;
+    cdd_add_clocks(number_of_clocks);
 
     cdd_done();
-
-    assert(n == 0 || allDBMs);
-    printf("Total generated DBMs: %d, non trivial ones: %d (%d%%)\n", allDBMs, goodDBMs,
-           allDBMs ? (100 * goodDBMs) / allDBMs : 0);
-    printf("apply+reduce: %.3fs, apply_reduce: %.3fs\n", time_apply_and_reduce, time_apply_reduce);
-    printf("reduce: %.3fs, bf_reduce: %.3fs\n", time_reduce, time_bf);
-
-    printf("Passed\n");
+    exit(0);
 }

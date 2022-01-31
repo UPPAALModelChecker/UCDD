@@ -1,4 +1,9 @@
-build*/
+# Editor backup files:
+*~
+
+# Build directories:
+build*
+cmake-build*
 
 # Prerequisites
 *.d

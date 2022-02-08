@@ -111,34 +111,29 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r)
 
     cdd_setmark(r);
 }
+void cdd_print_terminal_node(FILE* ofile, ddNode* r, int label)
+{
+    fprintf(ofile,
+            "\"%p\" [shape=box, label=\"%d\", style=filled, shape=box, height=0.3, width=0.3];\n",
+            (void *) r, label);
+}
 
+
+// main print function called from outside
 void cdd_fprintdot(FILE* ofile, ddNode* r)
 {
-
+    fprintf(ofile, "digraph G {\n");
     if (cdd_isterminal(r))
     {
         bool bit = cdd_is_negated(r);
-
-        fprintf(ofile, "digraph G {\n");
-        fprintf(ofile,
-                "\"%p\" [shape=box, label=\"%d\", style=filled, shape=box, height=0.3, width=0.3];\n",
-                (void *) r, bit);
+        cdd_print_terminal_node(ofile, r, bit);
     }
     else {
-        fprintf(ofile, "digraph G {\n");
-        fprintf(ofile,
-                "\"%p\" [shape=box, label=\"0\", style=filled, shape=box, height=0.3, width=0.3];\n",
-                (void *) cddfalse);
-        // Print the true terminal (might not be connected to anything)
-        // TODO: Print fake root if r is negated <-- old comment
-        fprintf(ofile,
-                "\"%p\" [shape=box, label=\"1\", style=filled, shape=box, height=0.3, width=0.3];\n",
-                (void *) cddtrue);
+        cdd_print_terminal_node(ofile,cddfalse, 0);
+        cdd_print_terminal_node(ofile,cddtrue, 1);
 
         cdd_fprintdot_rec(ofile, r);
     }
-
-
     fprintf(ofile, "}\n");
     cdd_unmark(r);
 }

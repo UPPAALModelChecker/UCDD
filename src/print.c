@@ -60,10 +60,14 @@ static void printInterval(FILE* ofile, raw_t lower, raw_t upper)
  */
 static void cdd_fprintdot_rec(FILE* ofile, ddNode* r)
 {
+    // we decided against regularizing because we need to know the bit to print the negation correctly
     //assert(cdd_rglr(r) == r);
 
-
-    if (cdd_isterminal(r) || cdd_ismarked(r)) {
+    if (cdd_isterminal(r)) {
+        return;
+    }
+    if (cdd_ismarked(r)) {
+        printf("print.c: a marked node has been reached during printing\n");
         return;
     }
 
@@ -72,12 +76,16 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r)
 
         fprintf(ofile, "\"%p\" [label=\"b%d\"];\n", (void*)r, node->level);
 
+        if (cdd_is_negated(r)) {
+            fprintf(ofile, "\"%p\" [shape=circle, color = red, label=\"b%d\"];\n", (void *) r, node->level);
+        } else {
+            fprintf(ofile, "\"%p\" [shape=circle, label=\"b%d\"];\n", (void *) r, node->level);
+        }
         // REVISIT: Check what happens if children are negated.
 
         //if (node->high != cddfalse) {
         // high edge cannot go to false terminal
         assert(node->high != cddfalse);
-
         fprintf(ofile, "\"%p\" -> \"%p\" [style=\"filled", (void*)r, (void*)node->high);
         fprintf(ofile, "\"];\n");
 
@@ -92,7 +100,7 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r)
         cddNode* node = cdd_node(r);
         Elem* p = node->elem;
 
-        fprintf(ofile, "\"%p\" [label=\"x%d-x%d\"];\n", (void*)r, cdd_info(node)->clock1,
+        fprintf(ofile, "\"%p\" [shape=octagon, label=\"x%d-x%d\"];\n", (void*)r, cdd_info(node)->clock1,
                 cdd_info(node)->clock2);
 
         do {
@@ -114,7 +122,7 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r)
 void cdd_print_terminal_node(FILE* ofile, ddNode* r, int label)
 {
     fprintf(ofile,
-            "\"%p\" [shape=box, label=\"%d\", style=filled, shape=box, height=0.3, width=0.3];\n",
+            "\"%p\" [shape=box, label=\"%d\", style=filled, height=0.3, width=0.3];\n",
             (void *) r, label);
 }
 
@@ -127,10 +135,10 @@ void cdd_fprintdot(FILE* ofile, ddNode* r)
     {
         bool bit = cdd_is_negated(r);
         cdd_print_terminal_node(ofile, r, bit);
-    }
-    else {
-        cdd_print_terminal_node(ofile,cddfalse, 0);
+    } else {
+
         cdd_print_terminal_node(ofile,cddtrue, 1);
+        cdd_print_terminal_node(ofile,cddfalse, 0);
 
         cdd_fprintdot_rec(ofile, r);
     }

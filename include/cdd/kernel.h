@@ -65,6 +65,9 @@ extern "C" {
 /** Returns the unmarked pointer to \a node */
 #define cdd_rglr(node) ((ddNode*)(((uintptr_t)(node)) & ~0x1))
 
+/** Returns the last bit (negated or true) of a \a node */
+#define cdd_is_negated(node) ((((uintptr_t)(node)) & 1))
+
 /** Returns a marked pointer to \a node */
 #define cdd_mask(node) (((uintptr_t)(node)) & 0x1)
 

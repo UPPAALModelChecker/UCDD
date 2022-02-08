@@ -37,3 +37,7 @@ cmake-build*
 *.exe
 *.out
 *.app
+
+# CLion workspace directory
+.idea*
+

@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.19)
 include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
+option(TESTING OFF)
 
 cmake_policy(SET CMP0048 NEW) # project() command manages VERSION variables
 set(CMAKE_CXX_STANDARD 17)
@@ -7,8 +10,8 @@ set(MULTI_TERMINAL 1)
 CONFIGURE_FILE("src/config.h.cmake" "include/cdd/config.h")
 
 project(UCDD VERSION 0.2 LANGUAGES CXX C)
-find_package(UUtils 1.1.0 REQUIRED)
-find_package(UDBM 2.0.8 REQUIRED)
+find_package(UUtils 1.1.0 REQUIRED PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs/UUtils)
+find_package(UDBM 2.0.8 REQUIRED PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs/UDBM)
 
 file(GLOB cdd_source "src/*.c" "src/*.cpp" "src/*.h")
 add_library(UCDD STATIC)
@@ -26,6 +29,12 @@ target_include_directories(UCDD
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_link_libraries(UCDD UDBM)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+
+if(TESTING)
+    enable_testing()
+    add_subdirectory("test")
+endif(TESTING)
 
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/UCDDConfigVersion.cmake VERSION ${PACKAGE_VERSION} COMPATIBILITY SameMajorVersion)
 

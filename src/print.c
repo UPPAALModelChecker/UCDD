@@ -55,22 +55,88 @@ static void printInterval(FILE* ofile, raw_t lower, raw_t upper)
 }
 
 
+/* Define a dynamic array of strings and its functions, to store pointers of nodes we have already visited
+ */
+typedef struct {
+
+    size_t used;
+    size_t size;
+    char ( *array )[40];
+} Array;
+
+
+int initArray( Array *a, size_t initialSize)
+{
+    a->used = 0;
+
+    a->array = malloc( initialSize * sizeof( char[40] ) );
+    int success = a->array != NULL;
+
+    if ( success )
+    {
+        a->size = initialSize;
+    }
+    else
+    {
+        a->size = 0;
+    }
+
+    return success;
+}
+
+int insertArray( Array *a, const char *element )
+{
+    int success = 1;
+
+    if ( a->used == a->size )
+    {
+        char ( *tmp )[40] = realloc( a->array, 2 * a->size * sizeof( char[40] ) );
+        if ( ( success = tmp != NULL ) )
+        {
+            a->array = tmp;
+            a->size *= 2;
+        }
+    }
+
+    if ( success )
+    {
+        strcpy( a->array[a->used++], element );
+    }
+
+    return success;
+}
+
+bool contains(Array *a, const char *element )
+{
+    printf("%i",a->used);
+    for (int i=0; i < a->used;i++)
+    {
+        //printf("%s : %s -> %i \n    ", a->array[i], element, strcmp(a->array[i], element));
+        if (strcmp(a->array[i], element)==0)
+            return true;
+    }
+    return false;
+}
+
+void freeArray(Array *a) {
+    free(a->array);
+    a->array = NULL;
+    a->used = a->size = 0;
+}
+
 
 /* Recursive function to print the nodes and edges of a CDD.  A side
  * effect of this function is that all nodes will be marked. All
  * previously marked nodes are ignored.
  */
-static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool negated)
+static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool negated, Array *a)
 {
     // we decided against regularizing because we need to know the bit to print the negation correctly
     //assert(cdd_rglr(r) == r);
 
-
     if (cdd_isterminal(r)) {
         return;
     }
-
-
 
     // this check was moved inside CDD part
     /*if (cdd_ismarked(r)) {
@@ -78,9 +144,15 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool ne
         return;
     }*/
 
+    // establish color for printing the node
+    char *node_color = "black";
+    if (cdd_is_negated(r))
+        node_color = "red";
+
     if (cdd_info(r)->type == TYPE_BDD) {
         bddNode* node = bdd_node(r);
 
+        // printf("bdd node");
         // we annotate each location in the dot file with a 0 if it was reached with an even number of negations,
         // and with a 1 if it was reached with an odd number of negations.
         char *current_neg_appendix = "0";
@@ -89,7 +161,7 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool ne
 
         // we do not care about whether the current node is negated, only about whether it was reached via a negation
         if (negated) current_neg_appendix = "1";
-        // to see if its children are reached via negation, we do need to take the current one into account
+        // to see if its children are reached via negation, we do need to take the current negation into account
         if (cdd_is_negated(r) ^ negated)
         {
             high_neg_appendix = "1";
@@ -103,38 +175,46 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool ne
             low_neg_appendix="";
 
 
-        // establish color for printing the node
-        char *node_color = "black";
-        if (cdd_is_negated(r))
-            node_color = "red";
+        //we chech whether we already reached this node via an array of strings keeping track of the pointers plus appendix
+        char buf[40] = {0};
+        snprintf(buf, sizeof buf, "%p%s\n", (void *) r, current_neg_appendix);
 
-        // print current node
-        fprintf(ofile, "\"%p%s\" [shape=circle, color = %s, label=\"b%d\"];\n", (void *) r, current_neg_appendix, node_color, node->level);
 
-        // print arrow to high
-        if (flip_negated && (negated ^ cdd_is_negated(r)) && cdd_isterminal((void *) node->high)) {
-            // flip arrow to the negated terminal if we had negation
-            fprintf(ofile, "\"%p%s\" -> \"%p\" [style=\"filled", (void *) r, current_neg_appendix, cdd_neg((void *) node->high));
-            fprintf(ofile, "\"];\n");
-        } else {
-            // print normal arrows with annotation for children
-            fprintf(ofile, "\"%p%s\" -> \"%p%s\" [style=\"filled", (void *) r, current_neg_appendix, (void *) node->high, high_neg_appendix);
-            fprintf(ofile, "\"];\n");
+        if (!contains(a,buf)) {
+            insertArray(a, buf);
+
+            // print current node
+            fprintf(ofile, "\"%p%s\" [shape=circle, color = %s, label=\"b%d\"];\n", (void *) r, current_neg_appendix,
+                    node_color, node->level);
+
+            // print arrow to high
+            if (flip_negated && (negated ^ cdd_is_negated(r)) && cdd_isterminal((void *) node->high)) {
+                // flip arrow to the negated terminal if we had negation
+                fprintf(ofile, "\"%p%s\" -> \"%p\" [style=\"filled", (void *) r, current_neg_appendix,
+                        cdd_neg((void *) node->high));
+                fprintf(ofile, "\"];\n");
+            } else {
+                // print normal arrows with annotation for children
+                fprintf(ofile, "\"%p%s\" -> \"%p%s\" [style=\"filled", (void *) r, current_neg_appendix,
+                        (void *) node->high, high_neg_appendix);
+                fprintf(ofile, "\"];\n");
+            }
+            // print arrow to low
+            if (flip_negated && (negated ^ cdd_is_negated(r)) && cdd_isterminal((void *) node->low)) {
+                // flip arrow to the negated terminal if we had negation
+                fprintf(ofile, "\"%p%s\" -> \"%p\" [style=\"dashed", (void *) r, current_neg_appendix,
+                        cdd_neg((void *) node->low));
+                fprintf(ofile, "\"];\n");
+            } else {
+                // print normal arrows with annotation for children
+                fprintf(ofile, "\"%p%s\" -> \"%p%s\" [style=\"dashed", (void *) r, current_neg_appendix,
+                        (void *) node->low, low_neg_appendix);
+                fprintf(ofile, "\"];\n");
+            }
+
+            cdd_fprintdot_rec(ofile, node->high, flip_negated, negated ^ cdd_is_negated(r), a);
+            cdd_fprintdot_rec(ofile, node->low, flip_negated, negated ^ cdd_is_negated(r), a);
         }
-        // print arrow to low
-        if (flip_negated && (negated ^ cdd_is_negated(r)) && cdd_isterminal((void *) node->low)) {
-            // flip arrow to the negated terminal if we had negation
-            fprintf(ofile, "\"%p%s\" -> \"%p\" [style=\"dashed", (void *) r, current_neg_appendix, cdd_neg((void *) node->low));
-            fprintf(ofile, "\"];\n");
-        } else {
-            // print normal arrows with annotation for children
-            fprintf(ofile, "\"%p%s\" -> \"%p%s\" [style=\"dashed", (void *) r, current_neg_appendix, (void *) node->low, low_neg_appendix);
-            fprintf(ofile, "\"];\n");
-        }
-
-        cdd_fprintdot_rec(ofile, node->high, flip_negated, negated ^ cdd_is_negated(r));
-        cdd_fprintdot_rec(ofile, node->low, flip_negated, negated ^ cdd_is_negated(r));
-
     } else {
 
         // marking destroys printing of BDDs but might be important for CDD
@@ -143,21 +223,38 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool ne
             return;
         }
 
+        //printf("cdd node");
         raw_t bnd = -INF;
         cddNode* node = cdd_node(r);
         Elem* p = node->elem;
 
-        fprintf(ofile, "\"%p\" [shape=octagon, label=\"x%d-x%d\"];\n", (void*)r, cdd_info(node)->clock1,
+        char *current_neg_appendix = "0";
+        char *child_neg_appendix = "0";
+
+        // we do not care about whether the current node is negated, only about whether it was reached via a negation
+        if (negated) current_neg_appendix = "1";
+        // to see if its children are reached via negation, we do need to take the current one into account
+        if (cdd_is_negated(r) ^ negated)
+        {
+            child_neg_appendix = "1";
+        }
+
+        // terminal children nodes don't need the annotation
+        if (cdd_isterminal((void *) node->next))
+            child_neg_appendix="";
+
+
+        fprintf(ofile, "\"%p%s\" [shape=octagon, color = %s, label=\"x%d-x%d\"];\n", (void*)r, current_neg_appendix, node_color, cdd_info(node)->clock1,
                 cdd_info(node)->clock2);
 
         do {
             ddNode* child = p->child;
             if (child != cddfalse) {
-                fprintf(ofile, "\"%p\" -> \"%p\" [style=%s, label=\"", (void*)r,
-                        (void*)cdd_rglr(child), cdd_mask(child) ? "dashed" : "filled");
+                fprintf(ofile, "\"%p%s\" -> \"%p%s\" [style=%s, label=\"", (void*)r, current_neg_appendix,
+                        (void*)cdd_rglr(child), child_neg_appendix, cdd_mask(child) ? "dashed" : "filled");
                 printInterval(ofile, bnd, p->bnd);
                 fprintf(ofile, "\"];\n");
-                cdd_fprintdot_rec(ofile, cdd_rglr(child), flip_negated, false);
+                cdd_fprintdot_rec(ofile, cdd_rglr(child), flip_negated, negated ^ cdd_is_negated(r),a);
             }
             bnd = p->bnd;
             p++;
@@ -177,6 +274,9 @@ void cdd_print_terminal_node(FILE* ofile, ddNode* r, int label)
 // main print function called from outside
 void cdd_fprintdot(FILE* ofile, ddNode* r, bool push_negate)
 {
+    Array a;
+    initArray(&a, 100);
+
     fprintf(ofile, "digraph G {\n");
     bool bit = cdd_is_negated(r);
     if (cdd_isterminal(r))
@@ -187,12 +287,14 @@ void cdd_fprintdot(FILE* ofile, ddNode* r, bool push_negate)
         cdd_print_terminal_node(ofile,cddtrue, 1);
         cdd_print_terminal_node(ofile,cddfalse, 0);
         if (push_negate)
-            cdd_fprintdot_rec(ofile, r, true, false);
+            cdd_fprintdot_rec(ofile, r, true, false,&a);
         else
-            cdd_fprintdot_rec(ofile, r, false, false);
+            cdd_fprintdot_rec(ofile, r, false, false,&a );
     }
     fprintf(ofile, "}\n");
     cdd_unmark(r);
+
+    freeArray(&a);
 }
 
 void cdd_printdot(ddNode* r, bool push_negate) { cdd_fprintdot(stdout, r, push_negate); }

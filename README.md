@@ -1,4 +1,7 @@
 # UPPAAL CDD Library
+NOTICE: This repository is a Work in Progress, intended as a replacement for [UPPAALModelChecker/UCDD](https://github.com/UPPAALModelChecker/UCDD), with an improved inter-repository structure.
+
+
 ## Build 
 The following packages need to be installed: `cmake gcc xxHash doctest boost`.
 Additionally, you need [UUtils](https://github.com/UPPAALModelChecker/UUtils) and [UDBM](https://github.com/UPPAALModelChecker/UDBM), which you can install system-wide, or locally by using the script `getlibs.sh`.

@@ -161,9 +161,9 @@
  * The public header file for the CDD library.
  */
 
-#include <dbm/dbm.h>
-
 #include <stdio.h>  // FILE
+
+#include <dbm/dbm.h>
 
 #ifdef __cplusplus
 extern "C" {

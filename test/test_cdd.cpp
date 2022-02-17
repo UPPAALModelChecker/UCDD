@@ -18,18 +18,19 @@
 #undef NDEBUG
 #endif
 
-#include <iostream>
-#include <time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include "base/Timer.h"
-#include "cdd/cdd.h"
-#include "cdd/kernel.h"
-#include "cdd/debug.h"
 #include "dbm/dbm.h"
 #include "dbm/gen.h"
 #include "dbm/print.h"
+#include "cdd/cdd.h"
+#include "cdd/debug.h"
+#include "cdd/kernel.h"
+#include "base/Timer.h"
 #include "debug/macros.h"
+
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 using std::endl;
 using std::cerr;
@@ -263,8 +264,8 @@ int main(int argc, char* argv[])
         }
         passDBMs = allDBMs - DBM_sofar;
         passGood = goodDBMs - good_sofar;
-        printf("*** Passed(%d) for %d generated DBMs, %d (%d%%) non trivial\n", j, passDBMs,
-               passGood, passDBMs ? (100 * passGood) / passDBMs : 0);
+        printf("*** Passed(%d) for %d generated DBMs, %d (%d%%) non trivial\n", j, passDBMs, passGood,
+               passDBMs ? (100 * passGood) / passDBMs : 0);
     }
 
     cdd_done();

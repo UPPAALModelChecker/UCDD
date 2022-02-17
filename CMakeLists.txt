@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.15)
 project(UCDD VERSION 0.2 LANGUAGES CXX C)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)

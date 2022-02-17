@@ -12,8 +12,9 @@
 #ifndef CDD_DEBUG_H
 #define CDD_DEBUG_H
 
-#include <cdd/cdd.h>
 #include "cdd/config.h"
+
+#include <cdd/cdd.h>
 
 #ifdef __cplusplus
 extern "C" {

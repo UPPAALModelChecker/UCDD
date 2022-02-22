@@ -1,6 +1,4 @@
 # UPPAAL CDD Library
-NOTICE: This repository is a Work in Progress, intended as a replacement for [UPPAALModelChecker/UCDD](https://github.com/UPPAALModelChecker/UCDD), with an improved inter-repository structure.
-
 
 ## Build 
 The following packages need to be installed: `cmake gcc xxHash doctest boost`.

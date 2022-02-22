@@ -22,7 +22,7 @@ cmake --build . --config Release
 cmake --install . --config Release
 export UUtils_ROOT=$SOURCE_DIR/libs/UUtils
 
-git clone https://github.com/UPPAALModelChecker/UDBM2 "$SOURCE_DIR/libs/sources/UDBM";
+git clone https://github.com/UPPAALModelChecker/UDBM "$SOURCE_DIR/libs/sources/UDBM";
 mkdir -p "$SOURCE_DIR/libs/sources/UDBM/build"
 cd "$SOURCE_DIR/libs/sources/UDBM/build"
 cmake $CMAKE_ARGS -DCMAKE_INSTALL_PREFIX="$SOURCE_DIR/libs/UDBM" ..

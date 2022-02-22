@@ -108,7 +108,7 @@ int insertArray( Array *a, const char *element )
 
 bool contains(Array *a, const char *element )
 {
-    printf("%i",a->used);
+    //printf("%i",a->used);
     for (int i=0; i < a->used;i++)
     {
         //printf("%s : %s -> %i \n    ", a->array[i], element, strcmp(a->array[i], element));
@@ -219,14 +219,14 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool ne
 
         // marking destroys printing of BDDs but might be important for CDD
         if (cdd_ismarked(r)) {
-            printf("print.c: a marked node has been reached during printing\n");
+            //printf("print.c: a marked node has been reached during printing\n");
             return;
         }
 
         //printf("cdd node");
         raw_t bnd = -INF;
-        cddNode* node = cdd_node(r);
-        Elem* p = node->elem;
+        cddNode *node = cdd_node(r);
+        Elem *p = node->elem;
 
         char *current_neg_appendix = "0";
         char *child_neg_appendix = "0";
@@ -234,15 +234,11 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool ne
         // we do not care about whether the current node is negated, only about whether it was reached via a negation
         if (negated) current_neg_appendix = "1";
         // to see if its children are reached via negation, we do need to take the current one into account
-        if (cdd_is_negated(r) ^ negated)
-        {
+        if (cdd_is_negated(r) ^ negated) {
             child_neg_appendix = "1";
         }
 
         // terminal children nodes don't need the annotation
-        if (cdd_isterminal((void *) node->next))
-            child_neg_appendix="";
-
 
         fprintf(ofile, "\"%p%s\" [shape=octagon, color = %s, label=\"x%d-x%d\"];\n", (void*)r, current_neg_appendix, node_color, cdd_info(node)->clock1,
                 cdd_info(node)->clock2);
@@ -250,11 +246,18 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool ne
         do {
             ddNode* child = p->child;
             if (child != cddfalse) {
+                if (child == cddfalse | child == cddtrue)
+                {
+                    child_neg_appendix = "";
+                }
+
                 fprintf(ofile, "\"%p%s\" -> \"%p%s\" [style=%s, label=\"", (void*)r, current_neg_appendix,
-                        (void*)cdd_rglr(child), child_neg_appendix, cdd_mask(child) ? "dashed" : "filled");
+                        (void*)(child), child_neg_appendix, cdd_mask(child) ? "dashed" : "filled");
                 printInterval(ofile, bnd, p->bnd);
                 fprintf(ofile, "\"];\n");
-                cdd_fprintdot_rec(ofile, cdd_rglr(child), flip_negated, negated ^ cdd_is_negated(r),a);
+
+                // TODO: here originally, the child node was regularized.. should I have kept that??
+                cdd_fprintdot_rec(ofile, child, flip_negated, negated ^ cdd_is_negated(r),a);
             }
             bnd = p->bnd;
             p++;

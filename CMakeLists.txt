@@ -10,8 +10,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(MULTI_TERMINAL 1)
 CONFIGURE_FILE("src/config.h.cmake" "include/cdd/config.h")
 
-find_package(UUtils 1.1.0 REQUIRED PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs/UUtils)
-find_package(UDBM 2.0.8 REQUIRED PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs/UDBM)
+set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${CMAKE_CURRENT_SOURCE_DIR}/libs")
+find_package(xxHash 0.8.0 REQUIRED COMPONENTS xxhash)
+find_package(UUtils 1.1.1 REQUIRED PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs/UUtils)
+find_package(UDBM 2.0.11 REQUIRED PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs/UDBM)
 
 # Bit of a hack. UUtils requires xxhash, but can fetch it like this.
 # But it can also find it in the system. If UDBM can find it in the system

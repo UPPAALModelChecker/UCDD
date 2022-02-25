@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(UCDD VERSION 0.2 LANGUAGES CXX C)
+project(UCDD VERSION 0.2.1 LANGUAGES CXX C)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 

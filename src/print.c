@@ -9,11 +9,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "cdd/kernel.h"
-#include "base/bitstring.h"
-
 #include <stdio.h>
 #include <stdlib.h>
+#include "cdd/kernel.h"
+#include "base/bitstring.h"
 
 typedef struct conditionList_ conditionList;
 typedef struct infor_ infor;
@@ -61,7 +60,8 @@ static void printInterval(FILE* ofile, raw_t lower, raw_t upper)
  */
 static void cdd_fprintdot_rec(FILE* ofile, ddNode* r)
 {
-    // assert(cdd_rglr(r) == r);
+    //assert(cdd_rglr(r) == r);
+
 
     if (cdd_isterminal(r) || cdd_ismarked(r)) {
         return;
@@ -70,37 +70,36 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r)
     if (cdd_info(r)->type == TYPE_BDD) {
         bddNode* node = bdd_node(r);
 
-        fprintf(ofile, "\"%p\" [label=\"b%d\"];\n", (void*)node, node->level);
+        fprintf(ofile, "\"%p\" [label=\"b%d\"];\n", (void*)r, node->level);
 
         // REVISIT: Check what happens if children are negated.
 
-        if (node->high != cddfalse) {
-            fprintf(ofile, "\"%p\" -> \"%p\" [style=\"filled", (void*)node, (void*)node->high);
-            fprintf(ofile, "\"];\n");
-        }
-        if (node->low != cddfalse) {
-            fprintf(ofile, "\"%p\" -> \"%p\" [style=\"dashed", (void*)node, (void*)node->low);
-            fprintf(ofile, "\"];\n");
-        }
+        //if (node->high != cddfalse) {
+        // high edge cannot go to false terminal
+        assert(node->high != cddfalse);
 
-        if (node->high != cddfalse) {
-            cdd_fprintdot_rec(ofile, node->high);
-        }
-        if (node->low != cddfalse) {
-            cdd_fprintdot_rec(ofile, node->low);
-        }
+        fprintf(ofile, "\"%p\" -> \"%p\" [style=\"filled", (void*)r, (void*)node->high);
+        fprintf(ofile, "\"];\n");
+
+        fprintf(ofile, "\"%p\" -> \"%p\" [style=\"dashed", (void*)r, (void*)node->low);
+        fprintf(ofile, "\"];\n");
+
+        cdd_fprintdot_rec(ofile, node->high);
+        cdd_fprintdot_rec(ofile, node->low);
+
     } else {
         raw_t bnd = -INF;
         cddNode* node = cdd_node(r);
         Elem* p = node->elem;
 
-        fprintf(ofile, "\"%p\" [label=\"x%d-x%d\"];\n", (void*)node, cdd_info(node)->clock1, cdd_info(node)->clock2);
+        fprintf(ofile, "\"%p\" [label=\"x%d-x%d\"];\n", (void*)r, cdd_info(node)->clock1,
+                cdd_info(node)->clock2);
 
         do {
             ddNode* child = p->child;
             if (child != cddfalse) {
-                fprintf(ofile, "\"%p\" -> \"%p\" [style=%s, label=\"", (void*)node, (void*)cdd_rglr(child),
-                        cdd_mask(child) ? "dashed" : "filled");
+                fprintf(ofile, "\"%p\" -> \"%p\" [style=%s, label=\"", (void*)r,
+                        (void*)cdd_rglr(child), cdd_mask(child) ? "dashed" : "filled");
                 printInterval(ofile, bnd, p->bnd);
                 fprintf(ofile, "\"];\n");
                 cdd_fprintdot_rec(ofile, cdd_rglr(child));
@@ -115,12 +114,30 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r)
 
 void cdd_fprintdot(FILE* ofile, ddNode* r)
 {
-    fprintf(ofile, "digraph G {\n");
-    fprintf(ofile, "\"%p\" [shape=box, label=\"0\", style=filled, shape=box, height=0.3, width=0.3];\n",
-            (void*)cddfalse);
 
-    cdd_fprintdot_rec(ofile, cdd_rglr(r));
-    // TODO: Print fake root if r is negated
+    if (cdd_isterminal(r))
+    {
+        bool bit = cdd_is_negated(r);
+
+        fprintf(ofile, "digraph G {\n");
+        fprintf(ofile,
+                "\"%p\" [shape=box, label=\"%d\", style=filled, shape=box, height=0.3, width=0.3];\n",
+                (void *) r, bit);
+    }
+    else {
+        fprintf(ofile, "digraph G {\n");
+        fprintf(ofile,
+                "\"%p\" [shape=box, label=\"0\", style=filled, shape=box, height=0.3, width=0.3];\n",
+                (void *) cddfalse);
+        // Print the true terminal (might not be connected to anything)
+        // TODO: Print fake root if r is negated <-- old comment
+        fprintf(ofile,
+                "\"%p\" [shape=box, label=\"1\", style=filled, shape=box, height=0.3, width=0.3];\n",
+                (void *) cddtrue);
+
+        cdd_fprintdot_rec(ofile, r);
+    }
+
 
     fprintf(ofile, "}\n");
     cdd_unmark(r);
@@ -146,8 +163,8 @@ static void print_node2label(FILE* ofile, ddNode* node)
 }
 
 static void cdd_freduce_dump_rec(FILE* ofile, int maskSize, ddNode* r, infor* parentInfo,
-                                 cdd_print_varloc_f labelPrinter, cdd_print_clockdiff_f clockPrinter, void* data,
-                                 int dotFormat)
+                                 cdd_print_varloc_f labelPrinter,
+                                 cdd_print_clockdiff_f clockPrinter, void* data, int dotFormat)
 {
     // We mark only the states which are printed (ie not the ones which are reduced)
     // Maybe a problem when calling cdd_unmark ? ("Does not recurse into a node which is not
@@ -192,11 +209,11 @@ static void cdd_freduce_dump_rec(FILE* ofile, int maskSize, ddNode* r, infor* pa
         do {
             ddNode* child = p->child;
             if (child != cddfalse) {
-                cdd_freduce_dump_rec(ofile, maskSize, cdd_rglr(child), NULL, labelPrinter, clockPrinter, data,
-                                     dotFormat);
+                cdd_freduce_dump_rec(ofile, maskSize, cdd_rglr(child), NULL, labelPrinter,
+                                     clockPrinter, data, dotFormat);
                 if (dotFormat) {
-                    fprintf(ofile, "\"%p\" -> \"%p\" [style=%s, label=\"", (void*)node, (void*)cdd_rglr(child),
-                            cdd_mask(child) ? "dashed" : "filled");
+                    fprintf(ofile, "\"%p\" -> \"%p\" [style=%s, label=\"", (void*)node,
+                            (void*)cdd_rglr(child), cdd_mask(child) ? "dashed" : "filled");
                     printInterval(ofile, bnd, p->bnd);
                     fprintf(ofile, "\"];\n");
                 } else {
@@ -204,11 +221,13 @@ static void cdd_freduce_dump_rec(FILE* ofile, int maskSize, ddNode* r, infor* pa
                     fprintf(ofile, "_%p : if (", (void*)node);
                     ifstatement = 1;
                     clockPrinter(ofile, levinf->clock1, levinf->clock2, data);
-                    fprintf(ofile, "%s%d", dbm_rawIsWeak(lower) ? ">=" : ">", -dbm_raw2bound(lower));
+                    fprintf(ofile, "%s%d", dbm_rawIsWeak(lower) ? ">=" : ">",
+                            -dbm_raw2bound(lower));
                     if (p->bnd != dbm_LS_INFINITY) {
                         fprintf(ofile, " && ");
                         clockPrinter(ofile, levinf->clock1, levinf->clock2, data);
-                        fprintf(ofile, "%s%d", dbm_rawIsWeak(p->bnd) ? "<=" : "<", dbm_raw2bound(p->bnd));
+                        fprintf(ofile, "%s%d", dbm_rawIsWeak(p->bnd) ? "<=" : "<",
+                                dbm_raw2bound(p->bnd));
                     }
                     fprintf(ofile, ") goto ");
                     print_node2label(ofile, cdd_rglr(child));
@@ -226,7 +245,8 @@ static void cdd_freduce_dump_rec(FILE* ofile, int maskSize, ddNode* r, infor* pa
         cdd_setmark(r);
     } else {
         bddNode* node = bdd_node(r);
-        if (parentInfo == NULL || (parentInfo->other != node->high && parentInfo->other != node->low)) {
+        if (parentInfo == NULL ||
+            (parentInfo->other != node->high && parentInfo->other != node->low)) {
             // No possible reduction, start exploration by low child
             infor myInfo;
             myInfo.current = node->low;
@@ -240,18 +260,21 @@ static void cdd_freduce_dump_rec(FILE* ofile, int maskSize, ddNode* r, infor* pa
             }
             base_setOneBit(myInfo.mask, node->level);
             myInfo.stringFound = false;
-            cdd_freduce_dump_rec(ofile, maskSize, node->low, &myInfo, labelPrinter, clockPrinter, data, dotFormat);
+            cdd_freduce_dump_rec(ofile, maskSize, node->low, &myInfo, labelPrinter, clockPrinter,
+                                 data, dotFormat);
 
             // Exploration of high child
             if (myInfo.stringFound) {
                 // Do not search for any string in high child
-                cdd_freduce_dump_rec(ofile, maskSize, node->high, NULL, labelPrinter, clockPrinter, data, dotFormat);
+                cdd_freduce_dump_rec(ofile, maskSize, node->high, NULL, labelPrinter, clockPrinter,
+                                     data, dotFormat);
             } else {
                 assert(*(myInfo.value) == 0);
                 myInfo.current = node->high;
                 myInfo.other = node->low;
                 base_setOneBit(myInfo.value, node->level);
-                cdd_freduce_dump_rec(ofile, maskSize, node->high, &myInfo, labelPrinter, clockPrinter, data, dotFormat);
+                cdd_freduce_dump_rec(ofile, maskSize, node->high, &myInfo, labelPrinter,
+                                     clockPrinter, data, dotFormat);
             }
 
             // Print node, mask, value, and children
@@ -264,10 +287,12 @@ static void cdd_freduce_dump_rec(FILE* ofile, int maskSize, ddNode* r, infor* pa
                 fprintf(ofile, "\"%p\" [label=\"_%p\"];\n", (void*)node, (void*)node);
 
                 if (myInfo.current != cddfalse) {
-                    fprintf(ofile, "\"%p\" -> \"%p\" [style=filled];\n", (void*)node, (void*)myInfo.current);
+                    fprintf(ofile, "\"%p\" -> \"%p\" [style=filled];\n", (void*)node,
+                            (void*)myInfo.current);
                 }
                 if (myInfo.other != cddfalse) {
-                    fprintf(ofile, "\"%p\" -> \"%p\" [style=dashed];\n", (void*)node, (void*)myInfo.other);
+                    fprintf(ofile, "\"%p\" -> \"%p\" [style=dashed];\n", (void*)node,
+                            (void*)myInfo.other);
                 }
             } else {
                 fprintf(ofile, "_%p: if ", (void*)node);
@@ -287,23 +312,25 @@ static void cdd_freduce_dump_rec(FILE* ofile, int maskSize, ddNode* r, infor* pa
             base_setOneBit(parentInfo->mask, node->level);
             if (parentInfo->other == node->high) {
                 parentInfo->current = node->low;
-                cdd_freduce_dump_rec(ofile, maskSize, node->low, parentInfo, labelPrinter, clockPrinter, data,
-                                     dotFormat);
-                cdd_freduce_dump_rec(ofile, maskSize, node->high, NULL, labelPrinter, clockPrinter, data, dotFormat);
+                cdd_freduce_dump_rec(ofile, maskSize, node->low, parentInfo, labelPrinter,
+                                     clockPrinter, data, dotFormat);
+                cdd_freduce_dump_rec(ofile, maskSize, node->high, NULL, labelPrinter, clockPrinter,
+                                     data, dotFormat);
             } else {
                 assert(parentInfo->other == node->low);
                 parentInfo->current = node->high;
                 base_setOneBit(parentInfo->value, node->level);
-                cdd_freduce_dump_rec(ofile, maskSize, node->high, parentInfo, labelPrinter, clockPrinter, data,
-                                     dotFormat);
-                cdd_freduce_dump_rec(ofile, maskSize, node->low, NULL, labelPrinter, clockPrinter, data, dotFormat);
+                cdd_freduce_dump_rec(ofile, maskSize, node->high, parentInfo, labelPrinter,
+                                     clockPrinter, data, dotFormat);
+                cdd_freduce_dump_rec(ofile, maskSize, node->low, NULL, labelPrinter, clockPrinter,
+                                     data, dotFormat);
             }
         }
     }
 }
 
-void cdd_fprint_code(FILE* ofile, ddNode* r, cdd_print_varloc_f labelPrinter, cdd_print_clockdiff_f clockPrinter,
-                     void* data)
+void cdd_fprint_code(FILE* ofile, ddNode* r, cdd_print_varloc_f labelPrinter,
+                     cdd_print_clockdiff_f clockPrinter, void* data)
 {
     assert(labelPrinter);
     assert(clockPrinter);
@@ -316,8 +343,8 @@ void cdd_fprint_code(FILE* ofile, ddNode* r, cdd_print_varloc_f labelPrinter, cd
     cdd_force_unmark(r);
 }
 
-void cdd_fprint_graph(FILE* ofile, ddNode* r, cdd_print_varloc_f labelPrinter, cdd_print_clockdiff_f clockPrinter,
-                      void* data)
+void cdd_fprint_graph(FILE* ofile, ddNode* r, cdd_print_varloc_f labelPrinter,
+                      cdd_print_clockdiff_f clockPrinter, void* data)
 {
     assert(labelPrinter);
     assert(clockPrinter);

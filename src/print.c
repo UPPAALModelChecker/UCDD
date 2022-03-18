@@ -54,6 +54,8 @@ static void printInterval(FILE* ofile, raw_t lower, raw_t upper)
     }
 }
 
+
+
 /* Recursive function to print the nodes and edges of a CDD.  A side
  * effect of this function is that all nodes will be marked. All
  * previously marked nodes are ignored.
@@ -63,9 +65,12 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool ne
     // we decided against regularizing because we need to know the bit to print the negation correctly
     //assert(cdd_rglr(r) == r);
 
+
     if (cdd_isterminal(r)) {
         return;
     }
+
+
 
     // this check was moved inside CDD part
     /*if (cdd_ismarked(r)) {
@@ -76,34 +81,54 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool ne
     if (cdd_info(r)->type == TYPE_BDD) {
         bddNode* node = bdd_node(r);
 
-        //fprintf(ofile, "\"%p\" [label=\"b%d\"];\n", (void*)r, node->level);
+        // we annotate each location in the dot file with a 0 if it was reached with an even number of negations,
+        // and with a 1 if it was reached with an odd number of negations.
+        char *current_neg_appendix = "0";
+        char *high_neg_appendix = "0";
+        char *low_neg_appendix = "0";
 
-        if (cdd_is_negated(r)) {
-            fprintf(ofile, "\"%p\" [shape=circle, color = red, label=\"b%d\"];\n", (void *) r, node->level);
-        } else {
-            fprintf(ofile, "\"%p\" [shape=circle, label=\"b%d\"];\n", (void *) r, node->level);
-        }
-        // REVISIT: Check what happens if children are negated.
-
-        //if (node->high != cddfalse) {
-        // high edge cannot go to false terminal
-        assert(node->high != cddfalse);
-
-
-        if (flip_negated && (negated ^ cdd_is_negated(r)) && cdd_isterminal((void *) node->high)) {
-            fprintf(ofile, "\"%p\" -> \"%p\" [style=\"filled", (void *) r, cdd_neg((void *) node->high));
-            fprintf(ofile, "\"];\n");
-        } else {
-            fprintf(ofile, "\"%p\" -> \"%p\" [style=\"filled", (void *) r, (void *) node->high);
-            fprintf(ofile, "\"];\n");
-        }
-
-        if (flip_negated && (negated ^ cdd_is_negated(r)) && cdd_isterminal((void *) node->low)) {
-            fprintf(ofile, "\"%p\" -> \"%p\" [style=\"dashed", (void *) r, cdd_neg((void *) node->low));
-            fprintf(ofile, "\"];\n");
-        } else
+        // we do not care about whether the current node is negated, only about whether it was reached via a negation
+        if (negated) current_neg_appendix = "1";
+        // to see if its children are reached via negation, we do need to take the current one into account
+        if (cdd_is_negated(r) ^ negated)
         {
-            fprintf(ofile, "\"%p\" -> \"%p\" [style=\"dashed", (void *) r, (void *) node->low);
+            high_neg_appendix = "1";
+            low_neg_appendix = "1";
+        }
+
+        // terminal children nodes don't need the annotation
+        if (cdd_isterminal((void *) node->high))
+            high_neg_appendix="";
+        if (cdd_isterminal((void *) node->low))
+            low_neg_appendix="";
+
+
+        // establish color for printing the node
+        char *node_color = "black";
+        if (cdd_is_negated(r))
+            node_color = "red";
+
+        // print current node
+        fprintf(ofile, "\"%p%s\" [shape=circle, color = %s, label=\"b%d\"];\n", (void *) r, current_neg_appendix, node_color, node->level);
+
+        // print arrow to high
+        if (flip_negated && (negated ^ cdd_is_negated(r)) && cdd_isterminal((void *) node->high)) {
+            // flip arrow to the negated terminal if we had negation
+            fprintf(ofile, "\"%p%s\" -> \"%p\" [style=\"filled", (void *) r, current_neg_appendix, cdd_neg((void *) node->high));
+            fprintf(ofile, "\"];\n");
+        } else {
+            // print normal arrows with annotation for children
+            fprintf(ofile, "\"%p%s\" -> \"%p%s\" [style=\"filled", (void *) r, current_neg_appendix, (void *) node->high, high_neg_appendix);
+            fprintf(ofile, "\"];\n");
+        }
+        // print arrow to low
+        if (flip_negated && (negated ^ cdd_is_negated(r)) && cdd_isterminal((void *) node->low)) {
+            // flip arrow to the negated terminal if we had negation
+            fprintf(ofile, "\"%p%s\" -> \"%p\" [style=\"dashed", (void *) r, current_neg_appendix, cdd_neg((void *) node->low));
+            fprintf(ofile, "\"];\n");
+        } else {
+            // print normal arrows with annotation for children
+            fprintf(ofile, "\"%p%s\" -> \"%p%s\" [style=\"dashed", (void *) r, current_neg_appendix, (void *) node->low, low_neg_appendix);
             fprintf(ofile, "\"];\n");
         }
 

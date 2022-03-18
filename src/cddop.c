@@ -9,21 +9,20 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include "bellmanford.h"
+#include "cache.h"
+#include "tarjan.h"
 
-#include "base/intutils.h"
-#include "base/bitstring.h"
 #include "dbm/dbm.h"
 #include "dbm/mingraph.h"
 #include "dbm/print.h"
-#include "debug/malloc.h"
-
 #include "cdd/kernel.h"
-#include "cache.h"
-#include "bellmanford.h"
-#include "tarjan.h"
+#include "base/bitstring.h"
+#include "base/intutils.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define RELAXCACHE
 
@@ -43,8 +42,7 @@
 #define REPLACEHASH(r)      ((uintptr_t)r)
 
 #ifdef RELAXCACHE
-#define RELAXHASH(n, l, c1, c2, u) \
-    (cdd_triple((uintptr_t)(node), cdd_pair((l), (c1)), cdd_pair((c2), (u))))
+#define RELAXHASH(n, l, c1, c2, u) (cdd_triple((uintptr_t)(node), cdd_pair((l), (c1)), cdd_pair((c2), (u))))
 #endif
 
 // #define cdd_and(l,r) cdd_apply_reduce((l), (r), cddop_and)
@@ -82,7 +80,7 @@ void cdd2Dot(char* fname, ddNode* node, char* name);
 
 /*=== INTERNAL PROTOTYPES ==============================================*/
 static int32_t cdd_contains_rec(ddNode*, raw_t*, int32_t dim);
-static ddNode* cdd_apply_rec(ddNode*, ddNode*, bool forced);
+static ddNode* cdd_apply_rec(ddNode*, ddNode*);
 #ifdef EX
 static ddNode* cdd_exist_rec(ddNode* node, int32_t*, int32_t*, raw_t*);
 #else
@@ -140,29 +138,11 @@ void cdd_operator_flush()
 #endif
 }
 
-
-ddNode* cdd_apply_forced(ddNode* l, ddNode* h, int32_t op)
-{
-    ddNode* res;
-    applyop = op;
-    res = cdd_apply_rec(l, h, true);
-    if (cdd_errorcond) {
-        cdd_error(cdd_errorcond);
-        return NULL;
-    }
-    return res;
-}
-
-ddNode* cdd_push_negate(ddNode* r) {
-    return cdd_apply_forced(r, r, cddop_and);
-}
-
-
 ddNode* cdd_apply(ddNode* l, ddNode* h, int32_t op)
 {
     ddNode* res;
     applyop = op;
-    res = cdd_apply_rec(l, h, false);
+    res = cdd_apply_rec(l, h);
     if (cdd_errorcond) {
         cdd_error(cdd_errorcond);
         return NULL;
@@ -170,7 +150,7 @@ ddNode* cdd_apply(ddNode* l, ddNode* h, int32_t op)
     return res;
 }
 
-static ddNode* cdd_apply_rec(ddNode* l, ddNode* r, bool forced)
+static ddNode* cdd_apply_rec(ddNode* l, ddNode* r)
 {
     CddCacheData* entry;
     int32_t lmask;
@@ -194,62 +174,60 @@ static ddNode* cdd_apply_rec(ddNode* l, ddNode* r, bool forced)
     }
 
     /* Termination conditons */
-    if (!forced) {
-        switch (applyop) {
-            case cddop_and:
-                if (l == r || r == cddtrue) {
-                    return l;
-                }
-                if (l == cddfalse || r == cddfalse || l == cdd_neg(r)) {
-                    return cddfalse;
-                }
-                if (l == cddtrue) {
-                    return r;
-                }
-                break;
-            case cddop_xor:
-                if (l == r) {
-                    return cddfalse;
-                }
-                if (l == cdd_neg(r)) {
-                    return cddtrue;
-                }
-                if (l == cddfalse) {
-                    return r;
-                }
-                if (r == cddfalse) {
-                    return l;
-                }
-                if (l == cddtrue) {
-                    return cdd_neg(r);
-                }
-                if (r == cddtrue) {
-                    return cdd_neg(l);
-                }
-                break;
-        }
-
-    }
-        /* The operation is symmetric; normalise for better cache performance */
-        if (l > r) {
-            n = l;
-            l = r;
-            r = n;
-        }
-
-        if (cdd_isterminal(l) && cdd_isterminal(r)) {
-            /* This may happen only for extra terminals and it
-             * is strange. We may return either of l or r.
-             */
-    #ifdef MULTI_TERMINAL
-            assert(cdd_is_extra_terminal(l) && cdd_is_extra_terminal(r));
-    #endif
-            if (l != r) {
-                fprintf(stderr, "Diagram is wrong: '%s' between extra terminal nodes.\n",
-                        applyop == cddop_and ? "and" : "xor");
-            }
+    switch (applyop) {
+    case cddop_and:
+        if (l == r || r == cddtrue) {
             return l;
         }
+        if (l == cddfalse || r == cddfalse || l == cdd_neg(r)) {
+            return cddfalse;
+        }
+        if (l == cddtrue) {
+            return r;
+        }
+        break;
+    case cddop_xor:
+        if (l == r) {
+            return cddfalse;
+        }
+        if (l == cdd_neg(r)) {
+            return cddtrue;
+        }
+        if (l == cddfalse) {
+            return r;
+        }
+        if (r == cddfalse) {
+            return l;
+        }
+        if (l == cddtrue) {
+            return cdd_neg(r);
+        }
+        if (r == cddtrue) {
+            return cdd_neg(l);
+        }
+        break;
+    }
+
+    /* The operation is symmetric; normalise for better cache performance */
+    if (l > r) {
+        n = l;
+        l = r;
+        r = n;
+    }
+
+    if (cdd_isterminal(l) && cdd_isterminal(r)) {
+        /* This may happen only for extra terminals and it
+         * is strange. We may return either of l or r.
+         */
+#ifdef MULTI_TERMINAL
+        assert(cdd_is_extra_terminal(l) && cdd_is_extra_terminal(r));
+#endif
+        if (l != r) {
+            fprintf(stderr, "Diagram is wrong: '%s' between extra terminal nodes.\n",
+                    applyop == cddop_and ? "and" : "xor");
+        }
+        return l;
+    }
 
     /* Do cache lookup */
     //    fprintf(stderr, "%u\n", APPLYHASH(l, r, applyop) % 10000);
@@ -292,7 +270,7 @@ static ddNode* cdd_apply_rec(ddNode* l, ddNode* r, bool forced)
         first = cdd_refstacktop;
 
         /* Do first recursion - check whether first edge is negated */
-        prev = cdd_apply_rec(cdd_neg_cond(lp->child, lmask), cdd_neg_cond(rp->child, rmask), forced);
+        prev = cdd_apply_rec(cdd_neg_cond(lp->child, lmask), cdd_neg_cond(rp->child, rmask));
         cdd_ref(prev);
         mask = cdd_mask(prev);
         bnd = minimum(lp->bnd, rp->bnd);
@@ -301,7 +279,7 @@ static ddNode* cdd_apply_rec(ddNode* l, ddNode* r, bool forced)
         while (bnd < INF) {
             lp += (lp->bnd == bnd);
             rp += (rp->bnd == bnd);
-            n = cdd_apply_rec(cdd_neg_cond(lp->child, lmask), cdd_neg_cond(rp->child, rmask), forced);
+            n = cdd_apply_rec(cdd_neg_cond(lp->child, lmask), cdd_neg_cond(rp->child, rmask));
             if (n != prev) {
                 cdd_push(cdd_neg_cond(prev, mask), bnd);
                 prev = n;
@@ -312,8 +290,7 @@ static ddNode* cdd_apply_rec(ddNode* l, ddNode* r, bool forced)
         cdd_push(cdd_neg_cond(prev, mask), INF);
 
         /* Create node */
-        entry->res = cdd_neg_cond(
-            cdd_make_cdd_node(minimum(l->level, r->level), first, cdd_refstacktop - first), mask);
+        entry->res = cdd_neg_cond(cdd_make_cdd_node(minimum(l->level, r->level), first, cdd_refstacktop - first), mask);
 
         /* Remove references */
         for (; first < cdd_refstacktop; first++) {
@@ -339,11 +316,10 @@ static ddNode* cdd_apply_rec(ddNode* l, ddNode* r, bool forced)
             rl = rh = r;
         }
 
-        n = cdd_apply_rec(cdd_neg_cond(ll, lmask), cdd_neg_cond(rl, rmask), forced);
+        n = cdd_apply_rec(cdd_neg_cond(ll, lmask), cdd_neg_cond(rl, rmask));
         cdd_ref(n);
-        entry->res =
-            cdd_make_bdd_node(minimum(l->level, r->level), n,
-                              cdd_apply_rec(cdd_neg_cond(lh, lmask), cdd_neg_cond(rh, rmask), forced));
+        entry->res = cdd_make_bdd_node(minimum(l->level, r->level), n,
+                                       cdd_apply_rec(cdd_neg_cond(lh, lmask), cdd_neg_cond(rh, rmask)));
         cdd_deref(n);
     }
 
@@ -357,8 +333,7 @@ static ddNode* cdd_apply_rec(ddNode* l, ddNode* r, bool forced)
 
 ///////////////////////////////////////////////////////////////////////////
 
-static bool cdd_constrain2(raw_t* dbm, uint32_t dim, uint32_t i, uint32_t j, raw_t lower,
-                           raw_t upper)
+static bool cdd_constrain2(raw_t* dbm, uint32_t dim, uint32_t i, uint32_t j, raw_t lower, raw_t upper)
 {
     constraint_t con[2] = {{j, i, bnd_l2u(lower)}, {i, j, upper}};
     return dbm_constrainN(dbm, dim, con, 2);
@@ -421,8 +396,7 @@ static int32_t cdd_contains_rec(ddNode* node, raw_t* d, int32_t dim)
         for (cdd_it_init(it, node); !cdd_it_atend(it); cdd_it_next(it)) {
             if (!IS_TRUE(cdd_it_child(it))) {
                 dbm_copy(tmp, d, dim);
-                if (cdd_constrain2(tmp, dim, info->clock1, info->clock2, cdd_it_lower(it),
-                                   cdd_it_upper(it)) &&
+                if (cdd_constrain2(tmp, dim, info->clock1, info->clock2, cdd_it_lower(it), cdd_it_upper(it)) &&
                     !cdd_contains_rec(cdd_it_child(it), tmp, dim)) {
                     free(tmp);
                     return 0;
@@ -662,8 +636,7 @@ static ddNode* cdd_exist_rec(ddNode* node, int32_t* levels, ddNode* c)
     return res;
 }
 #else
-static ddNode* relax(ddNode* node, int32_t* clocks, raw_t lower, int32_t clock1, int32_t clock2,
-                     raw_t upper, raw_t* rc)
+static ddNode* relax(ddNode* node, int32_t* clocks, raw_t lower, int32_t clock1, int32_t clock2, raw_t upper, raw_t* rc)
 {
     LevelInfo* info;
     cdd_iterator it;
@@ -687,8 +660,8 @@ static ddNode* relax(ddNode* node, int32_t* clocks, raw_t lower, int32_t clock1,
 
 #ifdef RELAXCACHE
     entry = CddCache_lookup(&relaxcache, RELAXHASH(node, lower, clock1, clock2, upper));
-    if (entry->node == node && entry->lower == lower && entry->upper == upper &&
-        entry->clock1 == clock1 && entry->clock2 == clock2 && entry->op == opid) {
+    if (entry->node == node && entry->lower == lower && entry->upper == upper && entry->clock1 == clock1 &&
+        entry->clock2 == clock2 && entry->op == opid) {
         if (cdd_rglr(entry->res)->ref == 0) {
             cdd_reclaim(entry->res);
         }
@@ -736,8 +709,7 @@ static ddNode* relax(ddNode* node, int32_t* clocks, raw_t lower, int32_t clock1,
 
             // Add consequence if tighter then those already removed
             if (pos > -1) {
-                if ((l > bnd_u2l(rc[neg * cdd_clocknum + pos])) ||
-                    (u < rc[pos * cdd_clocknum + neg])) {
+                if ((l > bnd_u2l(rc[neg * cdd_clocknum + pos])) || (u < rc[pos * cdd_clocknum + neg])) {
                     tmp3 = cdd_interval(pos, neg, maximum(l, bnd_u2l(rc[neg * cdd_clocknum + pos])),
                                         minimum(u, rc[pos * cdd_clocknum + neg]));
                     cdd_ref(tmp3);
@@ -753,8 +725,7 @@ static ddNode* relax(ddNode* node, int32_t* clocks, raw_t lower, int32_t clock1,
             }
 
             // Rebuild CDD by adding constraints from node
-            tmp3 =
-                cdd_interval_from_level(cdd_rglr(node)->level, cdd_it_lower(it), cdd_it_upper(it));
+            tmp3 = cdd_interval_from_level(cdd_rglr(node)->level, cdd_it_lower(it), cdd_it_upper(it));
             cdd_ref(tmp3);
 
             tmp4 = cdd_and(tmp2, tmp3);
@@ -843,8 +814,8 @@ static ddNode* cdd_exist_rec(ddNode* node, int32_t* levels, int32_t* clocks, raw
                 rc[info->clock2 * cdd_clocknum + info->clock1] = bnd_l2u(cdd_it_lower(it));
                 rc[info->clock1 * cdd_clocknum + info->clock2] = cdd_it_upper(it);
 
-                tmp1 = relax(cdd_it_child(it), clocks, cdd_it_lower(it), info->clock1, info->clock2,
-                             cdd_it_upper(it), rc);
+                tmp1 =
+                    relax(cdd_it_child(it), clocks, cdd_it_lower(it), info->clock1, info->clock2, cdd_it_upper(it), rc);
 
                 cdd_ref(tmp1);
 
@@ -867,8 +838,7 @@ static ddNode* cdd_exist_rec(ddNode* node, int32_t* levels, int32_t* clocks, raw
             }
         } else {
             while (!cdd_it_atend(it)) {
-                tmp1 = cdd_interval_from_level(cdd_rglr(node)->level, cdd_it_lower(it),
-                                               cdd_it_upper(it));
+                tmp1 = cdd_interval_from_level(cdd_rglr(node)->level, cdd_it_lower(it), cdd_it_upper(it));
                 cdd_ref(tmp1);
 
                 tmp2 = cdd_exist_rec(cdd_it_child(it), levels, clocks, rc);
@@ -968,8 +938,7 @@ static ddNode* cdd_replace_rec(ddNode* node, int32_t* levels, int32_t* clocks)
     case TYPE_CDD:
         res = cddfalse;
         for (cdd_it_init(it, node); !cdd_it_atend(it); cdd_it_next(it)) {
-            tmp1 = cdd_interval(clocks[info->clock1], clocks[info->clock2], cdd_it_lower(it),
-                                cdd_it_upper(it));
+            tmp1 = cdd_interval(clocks[info->clock1], clocks[info->clock2], cdd_it_lower(it), cdd_it_upper(it));
             cdd_ref(tmp1);
             tmp2 = cdd_replace_rec(cdd_it_child(it), levels, clocks);
             cdd_ref(tmp2);
@@ -1269,8 +1238,7 @@ static ddNode* cdd_reduce2_rec(ddNode* node)
             /* Calculate split */
             tmp1 = add_bound(prev, cdd_rglr(node)->level, low, cdd_it_lower(it));
             cdd_ref(tmp1);
-            tmp2 = add_bound(cdd_it_child(it), cdd_rglr(node)->level, cdd_it_lower(it),
-                             cdd_it_upper(it));
+            tmp2 = add_bound(cdd_it_child(it), cdd_rglr(node)->level, cdd_it_lower(it), cdd_it_upper(it));
             cdd_ref(tmp2);
             split = cdd_or(tmp1, tmp2);
             cdd_ref(split);
@@ -1370,9 +1338,8 @@ static ddNode* cdd_tarjan_reduce_rec(ddNode* node, struct tarjan* graph)
     case TYPE_BDD:
         n = cdd_tarjan_reduce_rec(cdd_neg_cond(bdd_node(node)->low, cdd_mask(node)), graph);
         cdd_ref(n);
-        m = cdd_make_bdd_node(
-            cdd_rglr(node)->level, n,
-            cdd_tarjan_reduce_rec(cdd_neg_cond(bdd_node(node)->high, cdd_mask(node)), graph));
+        m = cdd_make_bdd_node(cdd_rglr(node)->level, n,
+                              cdd_tarjan_reduce_rec(cdd_neg_cond(bdd_node(node)->high, cdd_mask(node)), graph));
         cdd_deref(n);
         break;
 
@@ -1440,8 +1407,7 @@ static ddNode* cdd_tarjan_reduce_rec(ddNode* node, struct tarjan* graph)
 
         /* Create node */
         if (modified) {
-            m = cdd_neg_cond(cdd_make_cdd_node(cdd_rglr(node)->level, top, cdd_refstacktop - top),
-                             mask);
+            m = cdd_neg_cond(cdd_make_cdd_node(cdd_rglr(node)->level, top, cdd_refstacktop - top), mask);
         } else {
             m = node;
         }
@@ -1545,12 +1511,10 @@ static ddNode* cdd_apply_reduce_rec(ddNode* l, ddNode* r, struct tarjan* graph)
         break;
 #ifdef MULTI_TERMINAL
         if (cdd_is_extra_terminal(l)) {
-            return cdd_mask(l) ? cdd_tarjan_reduce_rec(r, graph)
-                               : cdd_tarjan_reduce_rec(cdd_neg(r), graph);
+            return cdd_mask(l) ? cdd_tarjan_reduce_rec(r, graph) : cdd_tarjan_reduce_rec(cdd_neg(r), graph);
         }
         if (cdd_is_extra_terminal(r)) {
-            return cdd_mask(r) ? cdd_tarjan_reduce_rec(l, graph)
-                               : cdd_tarjan_reduce_rec(cdd_neg(l), graph);
+            return cdd_mask(r) ? cdd_tarjan_reduce_rec(l, graph) : cdd_tarjan_reduce_rec(cdd_neg(l), graph);
         }
 #endif
     }
@@ -1623,16 +1587,14 @@ static ddNode* cdd_apply_reduce_rec(ddNode* l, ddNode* r, struct tarjan* graph)
             bnd = minimum(lp->bnd, rp->bnd);
             if (bnd == dbm_LS_INFINITY) {
                 cdd_refstacktop = top;
-                return cdd_apply_reduce_rec(cdd_neg_cond(lp->child, lmask),
-                                            cdd_neg_cond(rp->child, rmask), graph);
+                return cdd_apply_reduce_rec(cdd_neg_cond(lp->child, lmask), cdd_neg_cond(rp->child, rmask), graph);
             }
             cdd_tarjan_push(graph, info->clock1, info->clock2, bnd);
         }
 
         /* Do first recursion - check whether first edge is negated.
          */
-        prev = cdd_apply_reduce_rec(cdd_neg_cond(lp->child, lmask), cdd_neg_cond(rp->child, rmask),
-                                    graph);
+        prev = cdd_apply_reduce_rec(cdd_neg_cond(lp->child, lmask), cdd_neg_cond(rp->child, rmask), graph);
         cdd_ref(prev);
         mask = cdd_mask(prev);
         cdd_tarjan_pop(graph, info->clock1);
@@ -1650,8 +1612,7 @@ static ddNode* cdd_apply_reduce_rec(ddNode* l, ddNode* r, struct tarjan* graph)
         cdd_tarjan_push(graph, info->clock2, info->clock1, bnd_l2u(lower));
         while (bnd < INF && cdd_tarjan_consistent(graph)) {
             cdd_tarjan_push(graph, info->clock1, info->clock2, bnd);
-            n = cdd_apply_reduce_rec(cdd_neg_cond(lp->child, lmask), cdd_neg_cond(rp->child, rmask),
-                                     graph);
+            n = cdd_apply_reduce_rec(cdd_neg_cond(lp->child, lmask), cdd_neg_cond(rp->child, rmask), graph);
             cdd_tarjan_pop(graph, info->clock1);
             cdd_tarjan_pop(graph, info->clock2);
 
@@ -1673,8 +1634,7 @@ static ddNode* cdd_apply_reduce_rec(ddNode* l, ddNode* r, struct tarjan* graph)
          * only if the path is consistent.
          */
         if (bnd == INF && cdd_tarjan_consistent(graph)) {
-            n = cdd_apply_reduce_rec(cdd_neg_cond(lp->child, lmask), cdd_neg_cond(rp->child, rmask),
-                                     graph);
+            n = cdd_apply_reduce_rec(cdd_neg_cond(lp->child, lmask), cdd_neg_cond(rp->child, rmask), graph);
             if (n != prev) {
                 cdd_push(cdd_neg_cond(prev, mask), lower);
                 prev = n;
@@ -1689,8 +1649,7 @@ static ddNode* cdd_apply_reduce_rec(ddNode* l, ddNode* r, struct tarjan* graph)
 
         /* Create node.
          */
-        res = cdd_neg_cond(
-            cdd_make_cdd_node(minimum(l->level, r->level), first, cdd_refstacktop - first), mask);
+        res = cdd_neg_cond(cdd_make_cdd_node(minimum(l->level, r->level), first, cdd_refstacktop - first), mask);
 
         /* Remove references.
          */
@@ -1720,9 +1679,8 @@ static ddNode* cdd_apply_reduce_rec(ddNode* l, ddNode* r, struct tarjan* graph)
 
         n = cdd_apply_reduce_rec(cdd_neg_cond(ll, lmask), cdd_neg_cond(rl, rmask), graph);
         cdd_ref(n);
-        res = cdd_make_bdd_node(
-            minimum(l->level, r->level), n,
-            cdd_apply_reduce_rec(cdd_neg_cond(lh, lmask), cdd_neg_cond(rh, rmask), graph));
+        res = cdd_make_bdd_node(minimum(l->level, r->level), n,
+                                cdd_apply_reduce_rec(cdd_neg_cond(lh, lmask), cdd_neg_cond(rh, rmask), graph));
         cdd_deref(n);
     }
 

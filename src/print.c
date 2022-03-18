@@ -58,7 +58,7 @@ static void printInterval(FILE* ofile, raw_t lower, raw_t upper)
  * effect of this function is that all nodes will be marked. All
  * previously marked nodes are ignored.
  */
-static void cdd_fprintdot_rec(FILE* ofile, ddNode* r)
+static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool negated)
 {
     // we decided against regularizing because we need to know the bit to print the negation correctly
     //assert(cdd_rglr(r) == r);
@@ -66,15 +66,17 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r)
     if (cdd_isterminal(r)) {
         return;
     }
-    if (cdd_ismarked(r)) {
+
+    // this check was moved inside CDD part
+    /*if (cdd_ismarked(r)) {
         printf("print.c: a marked node has been reached during printing\n");
         return;
-    }
+    }*/
 
     if (cdd_info(r)->type == TYPE_BDD) {
         bddNode* node = bdd_node(r);
 
-        fprintf(ofile, "\"%p\" [label=\"b%d\"];\n", (void*)r, node->level);
+        //fprintf(ofile, "\"%p\" [label=\"b%d\"];\n", (void*)r, node->level);
 
         if (cdd_is_negated(r)) {
             fprintf(ofile, "\"%p\" [shape=circle, color = red, label=\"b%d\"];\n", (void *) r, node->level);
@@ -86,16 +88,36 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r)
         //if (node->high != cddfalse) {
         // high edge cannot go to false terminal
         assert(node->high != cddfalse);
-        fprintf(ofile, "\"%p\" -> \"%p\" [style=\"filled", (void*)r, (void*)node->high);
-        fprintf(ofile, "\"];\n");
 
-        fprintf(ofile, "\"%p\" -> \"%p\" [style=\"dashed", (void*)r, (void*)node->low);
-        fprintf(ofile, "\"];\n");
 
-        cdd_fprintdot_rec(ofile, node->high);
-        cdd_fprintdot_rec(ofile, node->low);
+        if (flip_negated && (negated ^ cdd_is_negated(r)) && cdd_isterminal((void *) node->high)) {
+            fprintf(ofile, "\"%p\" -> \"%p\" [style=\"filled", (void *) r, cdd_neg((void *) node->high));
+            fprintf(ofile, "\"];\n");
+        } else {
+            fprintf(ofile, "\"%p\" -> \"%p\" [style=\"filled", (void *) r, (void *) node->high);
+            fprintf(ofile, "\"];\n");
+        }
+
+        if (flip_negated && (negated ^ cdd_is_negated(r)) && cdd_isterminal((void *) node->low)) {
+            fprintf(ofile, "\"%p\" -> \"%p\" [style=\"dashed", (void *) r, cdd_neg((void *) node->low));
+            fprintf(ofile, "\"];\n");
+        } else
+        {
+            fprintf(ofile, "\"%p\" -> \"%p\" [style=\"dashed", (void *) r, (void *) node->low);
+            fprintf(ofile, "\"];\n");
+        }
+
+        cdd_fprintdot_rec(ofile, node->high, flip_negated, negated ^ cdd_is_negated(r));
+        cdd_fprintdot_rec(ofile, node->low, flip_negated, negated ^ cdd_is_negated(r));
 
     } else {
+
+        // marking destroys printing of BDDs but might be important for CDD
+        if (cdd_ismarked(r)) {
+            printf("print.c: a marked node has been reached during printing\n");
+            return;
+        }
+
         raw_t bnd = -INF;
         cddNode* node = cdd_node(r);
         Elem* p = node->elem;
@@ -110,7 +132,7 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r)
                         (void*)cdd_rglr(child), cdd_mask(child) ? "dashed" : "filled");
                 printInterval(ofile, bnd, p->bnd);
                 fprintf(ofile, "\"];\n");
-                cdd_fprintdot_rec(ofile, cdd_rglr(child));
+                cdd_fprintdot_rec(ofile, cdd_rglr(child), flip_negated, false);
             }
             bnd = p->bnd;
             p++;
@@ -128,26 +150,27 @@ void cdd_print_terminal_node(FILE* ofile, ddNode* r, int label)
 
 
 // main print function called from outside
-void cdd_fprintdot(FILE* ofile, ddNode* r)
+void cdd_fprintdot(FILE* ofile, ddNode* r, bool push_negate)
 {
     fprintf(ofile, "digraph G {\n");
+    bool bit = cdd_is_negated(r);
     if (cdd_isterminal(r))
     {
-        bool bit = cdd_is_negated(r);
         cdd_print_terminal_node(ofile, r, bit);
     } else {
 
         cdd_print_terminal_node(ofile,cddtrue, 1);
         cdd_print_terminal_node(ofile,cddfalse, 0);
-
-        r = cdd_push_negate(r);
-        cdd_fprintdot_rec(ofile, r);
+        if (push_negate)
+            cdd_fprintdot_rec(ofile, r, true, false);
+        else
+            cdd_fprintdot_rec(ofile, r, false, false);
     }
     fprintf(ofile, "}\n");
     cdd_unmark(r);
 }
 
-void cdd_printdot(ddNode* r) { cdd_fprintdot(stdout, r); }
+void cdd_printdot(ddNode* r, bool push_negate) { cdd_fprintdot(stdout, r, push_negate); }
 
 /******** TIGA related extensions. *********/
 

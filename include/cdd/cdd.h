@@ -593,14 +593,14 @@ extern ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t dim);
  * @param ofile the file to write to.
  * @param cdd   a CDD.
  */
-extern void cdd_fprintdot(FILE* ofile, ddNode* cdd);
+extern void cdd_fprintdot(FILE* ofile, ddNode* cdd, bool push_negate);
 
 /**
  * Print a CDD \a r as a dot input file to stdout.
  * @see cdd_fprintdot
  * @param cdd   a CDD.
  */
-extern void cdd_printdot(ddNode* cdd);
+extern void cdd_printdot(ddNode* cdd, bool push_negate);
 
 /**
  * Dump all the CDD nodes.
@@ -828,12 +828,12 @@ private:
     friend cdd cdd_reduce2(const cdd&);
     friend bool cdd_contains(const cdd&, raw_t* dbm, int32_t dim);
     friend cdd cdd_extract_dbm(const cdd&, raw_t* dbm, int32_t dim);
-    friend void cdd_fprintdot(FILE* ofile, const cdd&);
-    friend void cdd_printdot(const cdd&);
-    friend void cdd_fprint_code(FILE* ofile, const cdd&, cdd_print_varloc_f printer1, cdd_print_clockdiff_f printer2,
-                                void* dict);
-    friend void cdd_fprint_graph(FILE* ofile, const cdd&, cdd_print_varloc_f printer1, cdd_print_clockdiff_f printer2,
-                                 void* dict);
+    friend void cdd_fprintdot(FILE* ofile, const cdd&, bool push_negate);
+    friend void cdd_printdot(const cdd&, bool push_negate);
+    friend void cdd_fprint_code(FILE* ofile, const cdd&, cdd_print_varloc_f printer1,
+                                cdd_print_clockdiff_f printer2, void* dict);
+    friend void cdd_fprint_graph(FILE* ofile, const cdd&, cdd_print_varloc_f printer1,
+                                 cdd_print_clockdiff_f printer2, void* dict);
 #ifdef MULTI_TERMINAL
     friend cdd cdd_apply_tautology(const cdd&, int32_t);
     friend int32_t cdd_get_tautology_id(const cdd&);
@@ -1004,14 +1004,14 @@ inline cdd cdd_extract_dbm(const cdd& r, raw_t* dbm, int32_t dim) { return cdd(c
  * @param ofile the file to write to.
  * @param cdd   a CDD.
  */
-inline void cdd_fprintdot(FILE* ofile, const cdd& cdd) { cdd_fprintdot(ofile, cdd.root); }
+inline void cdd_fprintdot(FILE* ofile, const cdd& cdd, bool push_negate) { cdd_fprintdot(ofile, cdd.root, push_negate); }
 
 /**
  * Print a CDD \a r as a dot input file to stdout.
  * @see cdd_fprintdot
  * @param cdd   a CDD.
  */
-inline void cdd_printdot(const cdd& cdd) { cdd_printdot(cdd.root); }
+inline void cdd_printdot(const cdd& cdd, bool push_negate) { cdd_printdot(cdd.root, push_negate); }
 
 /**
  * Another way of printing a BCDD

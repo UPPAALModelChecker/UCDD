@@ -140,6 +140,7 @@ void cdd_fprintdot(FILE* ofile, ddNode* r)
         cdd_print_terminal_node(ofile,cddtrue, 1);
         cdd_print_terminal_node(ofile,cddfalse, 0);
 
+        r = cdd_push_negate(r);
         cdd_fprintdot_rec(ofile, r);
     }
     fprintf(ofile, "}\n");

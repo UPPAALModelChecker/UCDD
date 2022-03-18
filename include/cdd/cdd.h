@@ -483,6 +483,13 @@ extern ddNode* cdd_interval(int32_t i, int32_t j, raw_t lower, raw_t upper);
 extern ddNode* cdd_bddvar(int32_t level);
 
 /**
+ * Hopefully pushes negation down through the whole CDD structure
+ * @param node the node from where on the negation should be propagated
+ * @return the resulting negated node
+ */
+extern ddNode* cdd_push_negate(ddNode* node);
+
+/**
  * Performs a binary operation on two decision diagrams.
  * @param left  the left argument to the operation
  * @param right the right argument to the operation

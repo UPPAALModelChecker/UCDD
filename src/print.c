@@ -217,8 +217,8 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool ne
         }
     } else {
 
-        // marking destroys printing of BDDs but might be important for CDD
-        if (cdd_ismarked(r)) {
+        // regularizing before checking whether a node is marked
+        if (cdd_ismarked(cdd_rglr(r))) {
             //printf("print.c: a marked node has been reached during printing\n");
             return;
         }

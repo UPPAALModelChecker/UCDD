@@ -847,10 +847,10 @@ private:
     friend cdd cdd_extract_dbm(const cdd&, raw_t* dbm, int32_t dim);
     friend void cdd_fprintdot(FILE* ofile, const cdd&, bool push_negate);
     friend void cdd_printdot(const cdd&, bool push_negate);
-    friend void cdd_fprint_code(FILE* ofile, const cdd&, cdd_print_varloc_f printer1,
-                                cdd_print_clockdiff_f printer2, void* dict);
-    friend void cdd_fprint_graph(FILE* ofile, const cdd&, cdd_print_varloc_f printer1,
-                                 cdd_print_clockdiff_f printer2, void* dict);
+    friend void cdd_fprint_code(FILE* ofile, const cdd&, cdd_print_varloc_f printer1, cdd_print_clockdiff_f printer2,
+                                void* dict);
+    friend void cdd_fprint_graph(FILE* ofile, const cdd&, cdd_print_varloc_f printer1, cdd_print_clockdiff_f printer2,
+                                 void* dict);
 #ifdef MULTI_TERMINAL
     friend cdd cdd_apply_tautology(const cdd&, int32_t);
     friend int32_t cdd_get_tautology_id(const cdd&);
@@ -1021,7 +1021,10 @@ inline cdd cdd_extract_dbm(const cdd& r, raw_t* dbm, int32_t dim) { return cdd(c
  * @param ofile the file to write to.
  * @param cdd   a CDD.
  */
-inline void cdd_fprintdot(FILE* ofile, const cdd& cdd, bool push_negate) { cdd_fprintdot(ofile, cdd.root, push_negate); }
+inline void cdd_fprintdot(FILE* ofile, const cdd& cdd, bool push_negate)
+{
+    cdd_fprintdot(ofile, cdd.root, push_negate);
+}
 
 /**
  * Print a CDD \a r as a dot input file to stdout.

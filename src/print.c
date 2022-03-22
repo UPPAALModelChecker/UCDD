@@ -119,6 +119,10 @@ void freeArray(Array *a)
  * Recursive function to print the nodes and edges of a CDD. A side
  * effect of this function is that all nodes will be marked. All
  * previously marked nodes are ignored.
+ *
+ * flip_negated Whether to take negated nodes into account.
+ * negated Whether this node is reached by (an odd number of) negated node(s).
+ * a Dynamic array keeping track of already printed boolean nodes and it's negation status.
  */
 static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool negated, Array *a)
 {
@@ -191,6 +195,7 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool ne
             cdd_fprintdot_rec(ofile, node->high, flip_negated, negated ^ cdd_is_negated(r), a);
             cdd_fprintdot_rec(ofile, node->low, flip_negated, negated ^ cdd_is_negated(r), a);
         }
+
     } else {
         // Regularizing before checking whether a node is marked.
         if (cdd_ismarked(cdd_rglr(r))) {
@@ -218,8 +223,7 @@ static void cdd_fprintdot_rec(FILE* ofile, ddNode* r, bool flip_negated, bool ne
             ddNode* child = p->child;
             if (child != cddfalse) {
                 // Terminal children nodes don't need the annotation.
-                // TODO should this check be done before the previous if statement?
-                if (child == cddfalse | child == cddtrue) {
+                if (child == cddtrue) {
                     child_neg_appendix = "";
                 }
 
@@ -245,9 +249,7 @@ void cdd_print_terminal_node(FILE* ofile, ddNode* r, int label)
             (void*) r, label);
 }
 
-
 // Main print function called from outside.
-// TODO Finish proper doc of this method.
 void cdd_fprintdot(FILE* ofile, ddNode* r, bool push_negate)
 {
     Array a;
@@ -272,7 +274,6 @@ void cdd_fprintdot(FILE* ofile, ddNode* r, bool push_negate)
     freeArray(&a);
 }
 
-// TODO Finish proper doc of this method.
 void cdd_printdot(ddNode* r, bool push_negate) { cdd_fprintdot(stdout, r, push_negate); }
 
 /******** TIGA related extensions. *********/

@@ -1198,7 +1198,7 @@ static ddNode* add_bound(ddNode* c, int32_t level, raw_t low, raw_t up)
     return tmp2;
 }
 
-static int32_t equiv(ddNode* c, ddNode* d)
+ int32_t cdd_equiv(ddNode* c, ddNode* d)
 {
     ddNode* tmp1;
     ddNode* tmp2;
@@ -1261,7 +1261,7 @@ static ddNode* cdd_reduce2_rec(ddNode* node)
             cdd_ref(join);
 
             /* Are they equivalent ? */
-            if (equiv(split, join)) {
+            if (cdd_equiv(split, join)) {
                 /* Yes, use the union as the new prev */
                 cdd_rec_deref(prev);
                 prev = tmp1;

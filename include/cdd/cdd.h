@@ -742,6 +742,8 @@ extern ddNode* cddtrue;
  * @{
  */
 
+struct extraction_result;
+
 /**
  * C++ encapsulation of a decision diagram node (a ddNode). The class
  * maintains a reference to the node throughout its lifetime.
@@ -875,6 +877,7 @@ private:
     friend bool cdd_contains(const cdd&, raw_t* dbm, int32_t dim);
     friend cdd cdd_extract_dbm(const cdd&, raw_t* dbm, int32_t dim);
     friend cdd cdd_extract_bdd(const cdd&, raw_t* dbm, int32_t dim);
+    friend extraction_result cdd_extract_bdd_and_dbm(const cdd&);
     friend void cdd_fprintdot(FILE* ofile, const cdd&, bool push_negate);
     friend void cdd_printdot(const cdd&, bool push_negate);
     friend void cdd_fprint_code(FILE* ofile, const cdd&, cdd_print_varloc_f printer1, cdd_print_clockdiff_f printer2,
@@ -890,6 +893,14 @@ private:
 };
 
 /*=== Inline C++ interface ============================================*/
+
+/** Structure for returning the results of extractDBM */
+typedef struct extraction_result
+{
+    cdd* CDD_part; /**< The remainder of the CDD after removing a DBM */
+    cdd* BDD_part; /**< The boolean part below a removed DBM */
+    raw_t* dbm;    /**< the removed DBM */
+} extraction_result;
 
 /**
  * Returns true if \a dbm is included in the CDD.

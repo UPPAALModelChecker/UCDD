@@ -918,10 +918,7 @@ inline cdd cdd_lowerpp(int32_t i, int32_t j, raw_t bound) { return cdd(cdd_neg(c
  * @param the original cdd
  * @return a cdd that does not contain negative value
  */
-inline cdd cdd_remove_negative(const cdd& node)
-{
-    return cdd(cdd_remove_negative(node.handle()));
-}
+inline cdd cdd_remove_negative(const cdd& node) { return cdd(cdd_remove_negative(node.handle())); }
 
 /**
  * Creates a new CDD node corresponding to the constraint \a lower

@@ -135,7 +135,7 @@ static void cdd_rehash(NodeManager*, SubTable*);
 /**
  * Hash function used to pair two DD nodes.
  */
-#define bddHash(f, g) ((((uint32_t)(f)*DD_P1 + (uint32_t)(g)) * DD_P2))
+#define bddHash(f, g) ((uint32_t)(((uint32_t)(f)*DD_P1 + (uint32_t)(g)) * DD_P2))
 
 /**
  * Hash function over an array of \a len Elem elements.

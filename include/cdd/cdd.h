@@ -272,6 +272,14 @@ extern void cdd_ensure_running();
 extern int32_t cdd_add_bddvar(int32_t n);
 
 /**
+ * Interprate the CDD as clock values, and remove any negative
+ * clock values.
+ * @param the original cdd
+ * @return a cdd that does not contain negative value
+ */
+extern ddNode* cdd_remove_negative(ddNode* node);
+
+/**
  * Declares a number of clock variables. The library maintains a list
  * of boolean and clock variables. This functions adds more clock
  * variables to this list. Since CDD nodes describe differences
@@ -835,6 +843,7 @@ private:
     friend cdd cdd_intervalpp(int, int, raw_t, raw_t);
     friend cdd cdd_bddvarpp(int);
     friend cdd cdd_bddnvarpp(int);
+    friend cdd cdd_remove_negative(const cdd& node);
     friend cdd cdd_exist(const cdd&, int32_t*, int32_t*);
     friend cdd cdd_replace(const cdd&, int32_t*, int32_t*);
     friend int32_t cdd_nodecount(const cdd&);
@@ -902,6 +911,17 @@ inline cdd cdd_upperpp(int32_t i, int32_t j, raw_t bound) { return cdd(cdd_upper
  * @see cdd_intervalpp
  */
 inline cdd cdd_lowerpp(int32_t i, int32_t j, raw_t bound) { return cdd(cdd_neg(cdd_upper(i, j, bound))); }
+
+/**
+ * Interprate the CDD as clock values, and remove any negative
+ * clock values.
+ * @param the original cdd
+ * @return a cdd that does not contain negative value
+ */
+inline cdd cdd_remove_negative(const cdd& node)
+{
+    return cdd(cdd_remove_negative(node.handle()));
+}
 
 /**
  * Creates a new CDD node corresponding to the constraint \a lower

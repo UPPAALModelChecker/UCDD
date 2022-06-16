@@ -1114,12 +1114,9 @@ ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t size)
     ddNode *node, *zone, *result;
     uint32_t touched[bits2intsize(size)];
 
-    // cdd_printdot(cdd);
-
     node = cdd;
 
     dbm_init(dbm, size);
-    // dbm_print(stdout, dbm, size);
 
     base_resetBits(touched, bits2intsize(size));
 
@@ -1141,10 +1138,6 @@ ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t size)
 
         assert(cdd_it_child(it) != cddfalse);
 
-        /*printf("%d %d %d %d\n",
-               info->clock1, info->clock2,
-               bnd_l2u(cdd_it_lower(it)), cdd_it_upper(it));*/
-
         dbm_constrain(dbm, size, info->clock2, info->clock1, bnd_l2u(cdd_it_lower(it)), touched);
 
         dbm_constrain(dbm, size, info->clock1, info->clock2, cdd_it_upper(it), touched);
@@ -1164,25 +1157,23 @@ ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t size)
     return result;
 }
 
-
-
-ddNode* cdd_extract_bdd(ddNode* cdd, raw_t* dbm, int32_t size) {
+ddNode* cdd_extract_bdd(ddNode* cdd, raw_t* dbm, int32_t size)
+{
     cdd_iterator it;
-    LevelInfo *info;
+    LevelInfo* info;
     ddNode *node, *zone, *result;
     uint32_t touched[bits2intsize(size)];
 
     node = cdd;
 
     dbm_init(dbm, size);
-    // dbm_print(stdout, dbm, size);
 
     base_resetBits(touched, bits2intsize(size));
 
     while (!(cdd_isterminal(node))) {
         info = cdd_info(node);
         if (info->type == TYPE_BDD) {
-           return (node);
+            return (node);
         }
         assert(info->type != TYPE_BDD);
 
@@ -1196,23 +1187,11 @@ ddNode* cdd_extract_bdd(ddNode* cdd, raw_t* dbm, int32_t size) {
 
         assert(cdd_it_child(it) != cddfalse);
 
-        if (info->type != TYPE_BDD) {
-           // dbm_constrain(dbm, size, info->clock2, info->clock1, bnd_l2u(cdd_it_lower(it)), touched);
-
-           // dbm_constrain(dbm, size, info->clock1, info->clock2, cdd_it_upper(it), touched);
-        }
         node = cdd_it_child(it);
     }
 
     return cddtrue;
 }
-
-
-
-
-
-
-
 
 void cdd_mark_clock(int32_t* vec, int32_t c)
 {

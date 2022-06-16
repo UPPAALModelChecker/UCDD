@@ -604,8 +604,6 @@ extern ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t dim);
  */
 extern ddNode* cdd_extract_bdd(ddNode* cdd, raw_t* dbm, int32_t dim);
 
-
-
 /**
  * Print a CDD \a r as a dot input file \a ofile.\n\n
  *
@@ -1068,18 +1066,13 @@ inline cdd cdd_reduce2(const cdd& r) { return cdd(cdd_reduce2(r.root)); }
  */
 inline cdd cdd_extract_dbm(const cdd& r, raw_t* dbm, int32_t dim) { return cdd(cdd_extract_dbm(r.root, dbm, dim)); }
 
-
-
 /**
  * Extract the bottom BDD of the first DBM in a given CDD
  * @param cdd a cdd
  * @param dbm a dbm
  * @return the difference between \a cdd and \a dbm
  */
-inline cdd cdd_extract_bdd(const cdd& r, raw_t* dbm, int32_t dim)
-{
-    return cdd(cdd_extract_bdd(r.root, dbm, dim));
-}
+inline cdd cdd_extract_bdd(const cdd& r, raw_t* dbm, int32_t dim) { return cdd(cdd_extract_bdd(r.root, dbm, dim)); }
 
 /**
  * Print a CDD \a r as a dot input file \a ofile. You can use the dot

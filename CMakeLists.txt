@@ -15,9 +15,6 @@ set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${CMAKE_CURRENT_SOURCE_DIR}/libs")
 find_package(xxHash 0.8.0 REQUIRED COMPONENTS xxhash PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs/xxHash)
 find_package(UUtils 1.1.1 REQUIRED PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs/UUtils)
 find_package(UDBM 2.0.11 REQUIRED PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs/UDBM)
-if (TESTING)
-    find_package(doctest 2.4.8 REQUIRED PATHS ${PROJECT_SOURCE_DIR}/libs/doctest)
-endif(TESTING)
 
 include_directories(
     PRIVATE

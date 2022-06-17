@@ -22,11 +22,9 @@ jobs:
     - name: Build and test
       run: |
           export CTEST_OUTPUT_ON_FAILURE=1
-          mkdir build
-          cd build
-          cmake -DTESTING=yes ..
-          cmake --build .
-          ctest
+          cmake -DTESTING=yes . -B build
+          cmake --build build
+          (cd build ; ctest)
   build-win:
     runs-on: ubuntu-latest
     steps:
@@ -41,11 +39,9 @@ jobs:
     - name: Build and test
       run: |
           export CTEST_OUTPUT_ON_FAILURE=1
-          mkdir build
-          cd build
-          cmake -DSTATIC=yes -DTESTING=yes "-DCMAKE_TOOLCHAIN_FILE=../toolchains/mingw.cmake" ..
-          cmake --build .
-          ctest
+          cmake -DSTATIC=yes -DTESTING=yes -DCMAKE_TOOLCHAIN_FILE=toolchains/mingw.cmake . -B build
+          cmake --build build
+          (cd build ; ctest)
   build-macos:
     runs-on: macos-latest
     steps:
@@ -55,9 +51,6 @@ jobs:
     - name: Build and test
       run: |
           export CTEST_OUTPUT_ON_FAILURE=1
-          mkdir build
-          cd build
-          cmake -DTESTING=yes ..
-          cmake --build .
-          ctest
-
+          cmake -DTESTING=yes . -B build
+          cmake --build build
+          (cd build ; ctest)

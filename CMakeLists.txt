@@ -3,7 +3,8 @@ project(UCDD VERSION 0.2.1 LANGUAGES CXX C)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
-option(TESTING OFF)
+option(TESTING "Unit tests" OFF)
+option(ASAN "Address Sanitizer" OFF)
 
 cmake_policy(SET CMP0048 NEW) # project() command manages VERSION variables
 set(CMAKE_CXX_STANDARD 17)
@@ -42,6 +43,11 @@ if(TESTING)
     enable_testing()
     add_subdirectory("test")
 endif(TESTING)
+
+if (ASAN)
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+endif(ASAN)
 
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/UCDDConfigVersion.cmake VERSION ${PACKAGE_VERSION} COMPATIBILITY SameMajorVersion)
 

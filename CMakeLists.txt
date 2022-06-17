@@ -29,6 +29,13 @@ include_directories(
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
+if(STATIC)
+    # The project does not use neither threads nor networking, but
+    # wsock32, ws2_32 and winpthread seem to be important for self-contained static binary
+    set(CMAKE_CXX_STANDARD_LIBRARIES "-static-libgcc -static-libstdc++ -lwsock32 -lws2_32 ${CMAKE_CXX_STANDARD_LIBRARIES}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
+endif(STATIC)
+
 add_subdirectory("src")
 
 if(TESTING)

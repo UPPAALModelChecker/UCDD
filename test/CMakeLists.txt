@@ -8,7 +8,7 @@ if (TESTING)
   foreach(source ${test_sources})
     get_filename_component(test_target ${source} NAME_WE)
     add_executable(${test_target} ${source})
-    target_link_libraries(${test_target} ${libs})
+    target_link_libraries(${test_target} PRIVATE ${libs})
   endforeach()
 
   add_test(NAME cdd_cdd_0  COMMAND test_cdd  0)

@@ -78,45 +78,6 @@ std::ostream& operator<<(std::ostream& os, const dbm_wrap& d)
     return os << "dbm@" << d.raw();
 }
 
-class cdd_wrap
-{
-    cdd cdd_data{};
-
-public:
-    cdd_wrap() = default;
-    explicit cdd_wrap(const cdd& data): cdd_data{data} {}
-    explicit cdd_wrap(dbm_wrap& dbm): cdd_data{dbm.raw(), dbm.size()} {}
-    cdd_wrap& operator=(const cdd& other)
-    {
-        cdd_data = other;
-        return *this;
-    }
-    cdd_wrap& operator=(const cdd_wrap& other)
-    {
-        cdd_data = other.raw();
-        return *this;
-    }
-    cdd_wrap& operator|=(const cdd& other)
-    {
-        cdd_data |= other;
-        return *this;
-    }
-    cdd_wrap& operator|=(const cdd_wrap& other)
-    {
-        cdd_data |= other.raw();
-        return *this;
-    }
-    bool operator==(const cdd& other) const { return cdd_data == other; }
-    bool operator==(const cdd_wrap& other) const { return cdd_data == other.raw(); }
-
-    bool contains(dbm_wrap& dbm) const { return cdd_contains(cdd_data, dbm.raw(), dbm.size()); }
-    const cdd& raw() const { return cdd_data; }
-};
-
-cdd_wrap operator&(const cdd_wrap& cdd1, const cdd_wrap& cdd2) { return cdd_wrap(cdd1.raw() & cdd2.raw()); }
-cdd_wrap operator|(const cdd_wrap& cdd1, const cdd_wrap& cdd2) { return cdd_wrap(cdd1.raw() | cdd2.raw()); }
-cdd_wrap operator^(const cdd_wrap& cdd1, const cdd_wrap& cdd2) { return cdd_wrap(cdd1.raw() ^ cdd2.raw()); }
-
 /** test conversion between CDD and DBMs */
 static void test_conversion(size_t size)
 {
@@ -125,25 +86,25 @@ static void test_conversion(size_t size)
 
     // Convert to CDD
     dbm1.generate();
-    auto cdd1 = cdd_wrap{dbm1};
+    auto cdd1 = cdd{dbm1.raw(), dbm1.size()};
 
     // Check conversion
-    REQUIRE(cdd1.contains(dbm1));  // dbm_print(stdout, dbm1, size);
+    REQUIRE(cdd_contains(cdd1, dbm1.raw(), dbm1.size()));  // dbm_print(stdout, dbm1, size);
 
     // Convert to DBM
-    auto cdd2 = cdd_wrap{cdd_extract_dbm(cdd1.raw(), dbm2.raw(), size)};
+    auto cdd2 = cdd{cdd_extract_dbm(cdd1, dbm2.raw(), size)};
 
     /* Check conversion
      */
     REQUIRE(dbm1 == dbm2);  // DIFF(D1, D2)
-    REQUIRE(cdd_reduce(cdd2.raw()) == cdd_false());
+    REQUIRE(cdd_reduce(cdd2) == cdd_false());
 }
 
 /* test intersection of CDDs
  */
 static void test_intersection(size_t size)
 {
-    cdd_wrap cdd1, cdd2, cdd3, cdd4;
+    cdd cdd1, cdd2, cdd3, cdd4;
     auto dbm1 = dbm_wrap{size};
     auto dbm2 = dbm_wrap{size};
     auto dbm3 = dbm_wrap{size};
@@ -158,17 +119,17 @@ static void test_intersection(size_t size)
     bool empty = !dbm_intersection(dbm3.raw(), dbm1.raw(), size);
 
     // Do the same with CDDs:
-    cdd1 = cdd_wrap(dbm1);
-    cdd2 = cdd_wrap(dbm2);
+    cdd1 = cdd(dbm1.raw(), size);
+    cdd2 = cdd(dbm2.raw(), size);
     cdd3 = cdd1 & cdd2;
 
     // Check the result:
     if (!empty) {
-        REQUIRE(cdd3.contains(dbm3));
+        REQUIRE(cdd_contains(cdd3, dbm3.raw(), size));
 
         // Extract DBM:
-        cdd3 = cdd_reduce(cdd3.raw());
-        cdd4 = cdd_extract_dbm(cdd3.raw(), dbm4.raw(), size);
+        cdd3 = cdd_reduce(cdd3);
+        cdd4 = cdd_extract_dbm(cdd3, dbm4.raw(), size);
 
         // Check result:
         REQUIRE(dbm3 == dbm4);  // DIFF(D1, D2);
@@ -183,17 +144,17 @@ static void test_apply_reduce(size_t size)
     /* Generate 8 simple CDDs and then 'or' them together in a pair
      * wise/binary tree fashion.
      */
-    cdd_wrap cdds[8];
+    cdd cdds[8];
     auto dbm = dbm_wrap{size};
 
     for (uint32_t i = 0; i < 8; i++) {
         dbm.generate();
-        cdds[i] = cdd_wrap(dbm);
+        cdds[i] = cdd(dbm.raw(), dbm.size());
     }
 
     for (uint32_t j = 4; j > 0; j /= 2) {
         for (uint32_t i = 0; i < j; i++) {
-            cdd_wrap a, b, c, e, f;
+            cdd a, b, c, e, f;
 
             a = cdds[2 * i];
             b = cdds[2 * i + 1];
@@ -201,25 +162,25 @@ static void test_apply_reduce(size_t size)
             /* Fake run to ensure that the result has already been
              * created (timing is more fair).
              */
-            c = !cdd_apply_reduce(!a.raw(), !b.raw(), cddop_and);
+            c = !cdd_apply_reduce(!a, !b, cddop_and);
 
             /* Run (a|b) last so that the apply_reduce calls do not
              * gain from any cache lookups.
              */
             Timer timer;
-            c = !cdd_apply_reduce(!a.raw(), !b.raw(), cddop_and);
+            c = !cdd_apply_reduce(!a, !b, cddop_and);
             time_apply_reduce += timer.getElapsed();
             e = a | b;
-            cdd_reduce(e.raw());
+            cdd_reduce(e);
             time_apply_and_reduce += timer.getElapsed();
 
             /* Check that c/d are actually reduced.
              */
-            REQUIRE(c == cdd_reduce(c.raw()));
+            REQUIRE(c == cdd_reduce(c));
 
             /* Check that c/d and e describe the same federation.
              */
-            REQUIRE(cdd_reduce((c ^ e).raw()) == cdd_false());
+            REQUIRE(cdd_reduce(c ^ e) == cdd_false());
 
             cdds[i] = c;
         }
@@ -229,29 +190,29 @@ static void test_apply_reduce(size_t size)
 static double time_reduce = 0;
 static double time_bf = 0;
 
-std::ostream& operator<<(std::ostream& os, const cdd_wrap& c)
+std::ostream& operator<<(std::ostream& os, const cdd& d)
 {
     // TODO: hookup pretty-printing function call for CDD
-    os << "cdd@" << &c.raw();
+    os << "cdd@" << &d;
     return os;
 }
 
 static void test_reduce(size_t size)
 {
-    cdd_wrap cdd1, cdd2, cdd3;
+    cdd cdd1, cdd2, cdd3;
     auto dbm = dbm_wrap{size};
 
     cdd1 = cdd_false();
     for (uint32_t j = 0; j < 5; j++) {
         dbm.generate();
-        cdd1 |= cdd_wrap(dbm);
+        cdd1 |= cdd(dbm.raw(), size);
     }
 
-    cdd2 = cdd_reduce(cdd1.raw());
+    cdd2 = cdd_reduce(cdd1);
     Timer timer;
-    cdd2 = cdd_reduce(cdd1.raw());
+    cdd2 = cdd_reduce(cdd1);
     time_reduce += timer.getElapsed();
-    cdd3 = cdd(cdd_bf_reduce(cdd1.raw().handle()));
+    cdd3 = cdd(cdd_bf_reduce(cdd1.handle()));
     time_bf += timer.getElapsed();
 
     REQUIRE(cdd2 == cdd3);

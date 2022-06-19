@@ -1098,6 +1098,15 @@ ddNode* cdd_from_dbm(const raw_t* dbm, int32_t size)
 }
 #endif
 
+ddNode* cdd_remove_negative(ddNode* cdd)
+{
+    ddNode* result = cdd;
+    for (int i = 1; i < cdd_clocknum; i++) {
+        result = cdd_apply(result, cdd_interval(i, 0, 0, dbm_LS_INFINITY), cddop_and);
+    }
+    return result;
+}
+
 ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t size)
 {
     cdd_iterator it;

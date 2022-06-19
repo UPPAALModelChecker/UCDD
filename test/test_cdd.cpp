@@ -218,6 +218,44 @@ static void test_reduce(size_t size)
     REQUIRE(cdd2 == cdd3);
 }
 
+static void test_remove_negative(size_t size)
+{
+    if (size == 0)
+        return;
+
+    // When cdd has size 1, it only contains the zero clock.
+    // This clock should always remain zero.
+    if (size == 1)
+        return;
+
+    cdd cdd1, cdd2, cdd3, cdd4, cdd5;
+    auto dbm = dbm_wrap{size};
+
+    // We create a CDD where only some range of negative values for the second clock are allowed.
+    cdd1 = cdd_interval(1, 0, -8, -4);
+
+    // Extracting a dbm triggers assert(isValid(dbm)) internally in cdd_extract_dbm.
+    // cdd2 = cdd_extract_dbm(cdd1, dbm.raw(), size);
+
+    cdd2 = cdd_remove_negative(cdd1);
+
+    // cdd_extract_dbm has build-in assertions to verify that the extracted dbm is valid.
+    // So successfully executing the line below means that the negative part of the cdd has
+    // been removed successfully.
+    cdd3 = cdd_extract_dbm(cdd2, dbm.raw(), size);
+
+    // Additional test cases
+    cdd1 = cdd_interval(1, 0, -8, -4);
+    cdd2 = cdd_remove_negative(cdd1);
+    REQUIRE(cdd2 == cdd_false());
+
+    cdd3 = cdd_lower(1, 0, -8);
+    cdd4 = cdd_remove_negative(cdd3);
+    cdd5 = cdd_remove_negative(cdd_true());
+    REQUIRE(cdd4 == cdd5);
+    REQUIRE(cdd4 != cdd3);
+}
+
 static void test(const char* name, TestFunction f, size_t size)
 {
     cout << name << " size = " << size << endl;
@@ -244,6 +282,7 @@ void big_test(uint32_t n, uint32_t seed)
             test("test_apply_reduce", test_apply_reduce, i);
             test("test_reduce      ", test_reduce, i);
         }
+        test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;
         passGood = dbm_wrap::get_goodDBMs() - good_sofar;
         printf("*** Passed(%d) for %d generated DBMs, %d (%d%%) non trivial\n", j, passDBMs, passGood,

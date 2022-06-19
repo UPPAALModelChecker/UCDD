@@ -16,7 +16,8 @@ for nine industrial examples the savings are in average 42% with moderate increa
 
 ## Compile
 The following packages need to be installed: `cmake gcc xxHash doctest boost`.
-Additionally, you need [UUtils](https://github.com/UPPAALModelChecker/UUtils) and [UDBM](https://github.com/UPPAALModelChecker/UDBM), which you can install system-wide, or locally by using the script `getlibs.sh`.
+
+In addition, [UUtils](https://github.com/UPPAALModelChecker/UUtils) and [UDBM](https://github.com/UPPAALModelChecker/UDBM) are needed, which can be installed system-wide, or locally by running the script [`getlibs.sh`](getlibs.sh).
 
 Get the dependencies, compile the source into `build` directory and run the unit tests:
 ```sh

@@ -1,13 +1,13 @@
 # Uppaal Clock Difference Diagram Library
 
-*Clock Difference Diagrams* (CDD), a [BDD](https://en.wikipedia.org/wiki/Binary_decision_diagram)-like
+*Clock Difference Diagrams* (CDD) is a [BDD](https://en.wikipedia.org/wiki/Binary_decision_diagram)-like
 data-structure for effective representation and manipulation of certain non-convex subsets of the Euclidean space,
 notably those encountered in verification of timed automata.
-It is shown that all set-theoretic operations including inclusion checking may be carried out effiiently on Clock Difference Diagrams.
+It is shown that all set-theoretic operations including inclusion checking may be carried out efficiently on Clock Difference Diagrams.
 Other clock operations needed for fully symbolic analysis of timed automata e.g. future- and
 reset-operations, can be obtained based on a tight normal form for CDD.
-Experimental results demonstrate significant space-savings:
-for nine industrial examples the savings are in average 42% with moderate increase in runtime.
+Experimental results demonstrate significant space-savings.
+For instance, in nine industrial examples the savings are on average 42% and with a moderate increase in runtime.
 
 **"Clock Difference Diagrams"** by *Kim Guldstrand Larsen, Justin Pearson, Carsten Weise and Wang Yi*. "Nordic Journal of Computing", 1999. [[pdf](https://vbn.aau.dk/ws/files/425046823/CDD_26pages_nordic_journal_of_computing_1999.pdf)] [[bib](https://dblp.uni-trier.de/rec/journals/njc/LarsenPWY99.html?view=bibtex)]
 

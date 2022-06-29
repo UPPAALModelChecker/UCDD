@@ -272,7 +272,7 @@ extern void cdd_ensure_running();
 extern int32_t cdd_add_bddvar(int32_t n);
 
 /**
- * Interprate the CDD as clock values, and remove any negative
+ * Interpret the CDD as clock values, and remove any negative
  * clock values.
  * @param the original cdd
  * @return a cdd that does not contain negative value

@@ -232,7 +232,11 @@ static void test_remove_negative(size_t size)
     auto dbm = dbm_wrap{size};
 
     // We create a CDD where only some range of negative values for the second clock are allowed.
-    cdd1 = cdd_interval(1, 0, -8, -4);
+    int bound1 = RANGE();
+    int bound2 = RANGE();
+    int low = ((bound1 >= bound2) ? bound1 : bound2) * -1;
+    int up = ((bound1 >= bound2) ? bound2 : bound1) * -1;
+    cdd1 = cdd_interval(1, 0, low, up);
 
     // Extracting a dbm triggers assert(isValid(dbm)) internally in cdd_extract_dbm.
     // cdd2 = cdd_extract_dbm(cdd1, dbm.raw(), size);
@@ -245,11 +249,12 @@ static void test_remove_negative(size_t size)
     cdd3 = cdd_extract_dbm(cdd2, dbm.raw(), size);
 
     // Additional test cases
-    cdd1 = cdd_interval(1, 0, -8, -4);
+
+    cdd1 = cdd_interval(1, 0, low, up);
     cdd2 = cdd_remove_negative(cdd1);
     REQUIRE(cdd2 == cdd_false());
 
-    cdd3 = cdd_lower(1, 0, -8);
+    cdd3 = cdd_lower(1, 0, low);
     cdd4 = cdd_remove_negative(cdd3);
     cdd5 = cdd_remove_negative(cdd_true());
     REQUIRE(cdd4 == cdd5);

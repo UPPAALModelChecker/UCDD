@@ -1198,7 +1198,7 @@ static ddNode* add_bound(ddNode* c, int32_t level, raw_t low, raw_t up)
     return tmp2;
 }
 
- int32_t cdd_equiv(ddNode* c, ddNode* d)
+int32_t cdd_equiv(ddNode* c, ddNode* d)
 {
     ddNode* tmp1;
     ddNode* tmp2;

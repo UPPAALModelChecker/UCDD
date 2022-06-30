@@ -342,11 +342,9 @@ extern int32_t cdd_get_number_of_tautologies();
 extern int32_t cdd_get_level_count();
 
 /**
- * checks for equivalence between two cdds
+ * Checks for equivalence between two CDDs.
  */
-extern  int32_t cdd_equiv(ddNode* c, ddNode* d);
-
-
+extern int32_t cdd_equiv(ddNode* c, ddNode* d);
 
 /**
  * Returns the number of BDD levels.
@@ -929,13 +927,9 @@ inline cdd cdd_lowerpp(int32_t i, int32_t j, raw_t bound) { return cdd(cdd_neg(c
 inline cdd cdd_remove_negative(const cdd& node) { return cdd(cdd_remove_negative(node.handle())); }
 
 /**
- * checks for equivalence between two cdds
+ * Checks for equivalence between two CDDs.
  */
-inline bool  cdd_equiv(const cdd& l, const cdd& r)
-{
-    return cdd_equiv(l.root,r.root);
-}
-
+inline bool cdd_equiv(const cdd& l, const cdd& r) { return cdd_equiv(l.root, r.root); }
 
 /**
  * Creates a new CDD node corresponding to the constraint \a lower

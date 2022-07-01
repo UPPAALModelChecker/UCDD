@@ -151,15 +151,18 @@ IncludeCategories:
  - Regex: '^<libxml/'
    Priority: 3
    SortPriority: 28
+ - Regex: '^<doctest/'
+   Priority: 3
+   SortPriority: 30
  - Regex: '^<boost/'
    Priority: 3
-   SortPriority: 29
+   SortPriority: 30
  - Regex: '^<[a-bd-z0-9][a-z0-9_]*(\.[a-z]*)?>$'
    Priority: 4
-   SortPriority: 30
+   SortPriority: 31
  - Regex: '^<c'
    Priority: 4
-   SortPriority: 31
+   SortPriority: 32
  #IncludeIsMainRegex: '([-_](test|unittest))?$'
 IndentCaseLabels: false
 IndentPPDirectives: None

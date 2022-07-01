@@ -42,18 +42,18 @@ if(STATIC)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
 endif(STATIC)
 
+if (ASAN)
+    add_compile_options(-fno-omit-frame-pointer -fsanitize=address)
+    add_link_options(-fno-omit-frame-pointer -fsanitize=address)
+    message(STATUS "Using Address Sanitizer")
+endif(ASAN)
+
 add_subdirectory("src")
 
 if(TESTING)
     enable_testing()
     add_subdirectory("test")
 endif(TESTING)
-
-if (ASAN)
-    add_compile_options(-fno-omit-frame-pointer -fsanitize=address)
-    add_link_options(-fno-omit-frame-pointer -fsanitize=address)
-    message(STATUS "Using Address Sanitizer")
-endif(ASAN)
 
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/UCDDConfigVersion.cmake VERSION ${PACKAGE_VERSION} COMPATIBILITY SameMajorVersion)
 

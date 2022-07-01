@@ -22,11 +22,11 @@
 #include "debug/macros.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include <doctest/doctest.h>
+
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
-
-#include <doctest/doctest.h>
 
 using std::endl;
 using std::cerr;
@@ -54,7 +54,12 @@ class dbm_wrap
 public:
     static uint32_t get_allDBMs() { return allDBMs; }
     static uint32_t get_goodDBMs() { return goodDBMs; }
-    explicit dbm_wrap(size_t size): data(size, 0) {}
+    static void resetCounters()
+    {
+        allDBMs = 0;
+        goodDBMs = 0;
+    }
+    explicit dbm_wrap(size_t size): data(size * size) {}
     uint32_t size() const { return data.size(); }
     const raw_t* raw() const { return data.data(); }
     raw_t* raw() { return data.data(); }
@@ -272,7 +277,7 @@ static void test(const char* name, TestFunction f, size_t size)
     }
 }
 
-void big_test(uint32_t n, uint32_t seed)
+static void big_test(uint32_t n, uint32_t seed)
 {
     cdd_init(100000, 10000, 10000);
     cdd_add_clocks(n);
@@ -307,24 +312,54 @@ void big_test(uint32_t n, uint32_t seed)
     printf("Passed\n");
 }
 
-#if INTPTR_MAX == INT32_MAX
-#define ENABLE_32BIT_TEST
-#endif /* 32-bit target */
+/*
+TEST_CASE("CDD intersection with size 3")
+{
+    cdd_init(100000, 10000, 10000);
+    cdd_add_clocks(3);
+    test_intersection(3);
+}
+ */
 
-TEST_CASE("Big CDD test")
+TEST_CASE("Big CDD test with size 0")
 {
     uint32_t seed{};
     srand(seed);
-    SUBCASE("size 0") { big_test(0, seed); }
-
-    SUBCASE("size 1") { big_test(1, seed); }
-
-    SUBCASE("size 2") { big_test(2, seed); }
-
-    // TODO: on 64-bit the bellow tests are failing :-(
-#ifdef ENABLE_32BIT_TEST
-    SUBCASE("size 3") { big_test(3, seed); }
-
-    SUBCASE("size 10") { big_test(10, seed); }
-#endif
+    dbm_wrap::resetCounters();
+    big_test(0, seed);
 }
+
+TEST_CASE("Big CDD test with size 1")
+{
+    uint32_t seed{};
+    srand(seed);
+    dbm_wrap::resetCounters();
+    big_test(1, seed);
+}
+
+TEST_CASE("Big CDD test with size 2")
+{
+    uint32_t seed{};
+    srand(seed);
+    dbm_wrap::resetCounters();
+    big_test(2, seed);
+}
+
+// TODO: on 64-bit the bellow tests are failing, thus disabled :-(
+#if INTPTR_MAX == INT32_MAX
+TEST_CASE("Big CDD test with size 3")
+{
+    uint32_t seed{};
+    srand(seed);
+    dbm_wrap::resetCounters();
+    big_test(3, seed);
+}
+
+TEST_CASE("Big CDD test with size 10")
+{
+    uint32_t seed{};
+    srand(seed);
+    dbm_wrap::resetCounters();
+    big_test(10, seed);
+}
+#endif /* 32-bit */

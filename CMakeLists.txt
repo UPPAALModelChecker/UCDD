@@ -50,8 +50,8 @@ if(TESTING)
 endif(TESTING)
 
 if (ASAN)
-    add_compile_options(-fsanitize=address)
-    add_link_options(-fsanitize=address)
+    add_compile_options(-fno-omit-frame-pointer -fsanitize=address)
+    add_link_options(-fno-omit-frame-pointer -fsanitize=address)
     message(STATUS "Using Address Sanitizer")
 endif(ASAN)
 

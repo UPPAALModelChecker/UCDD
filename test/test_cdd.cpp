@@ -14,7 +14,6 @@
 
 #include "dbm/dbm.h"
 #include "dbm/gen.h"
-#include "dbm/print.h"
 #include "cdd/cdd.h"
 #include "cdd/debug.h"
 #include "cdd/kernel.h"
@@ -82,8 +81,15 @@ public:
 
 std::ostream& operator<<(std::ostream& os, const dbm_wrap& d)
 {
-    // TODO: hookup pretty-printing function call for DBM
-    return os << "dbm@" << d.raw();
+    os << "dbm{" << d.raw();
+    for (auto i = 0u; i < d.size(); ++i) {
+        os << ((i == 0) ? "{" : ",{");
+        os << d.raw()[i * d.size()];
+        for (auto j = 1u; j < d.size(); ++j)
+            os << "," << d.raw()[i * d.size() + j];
+        os << "}";
+    }
+    return os << "}";
 }
 
 /** test conversion between CDD and DBMs */
@@ -200,8 +206,11 @@ static double time_bf = 0;
 
 std::ostream& operator<<(std::ostream& os, const cdd& d)
 {
-    // TODO: hookup pretty-printing function call for CDD
-    os << "cdd@" << &d;
+    static size_t cdd_log_counter = 0;
+    auto cdd_log = std::string{"cdd_"} + std::to_string(++cdd_log_counter) + ".dot";
+    auto file = std::fopen(cdd_log.c_str(), "w");
+    cdd_fprintdot(file, d, false);
+    os << "cdd@" << &d << "(" << cdd_log << ")";
     return os;
 }
 

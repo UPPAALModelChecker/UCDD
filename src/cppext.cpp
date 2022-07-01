@@ -80,13 +80,24 @@ extraction_result cdd_extract_bdd_and_dbm(const cdd& state)
     return res;
 }
 
+/**
+ * Perform the delay operation on a CDD.
+ *
+ * <p>The delay is performed by extracting all DBMs (and their
+ * corresponding BDD part), delaying the DBMs individually,
+ * and then compose the delayed DBMs back together with their
+ * BDD parts.</p>
+ *
+ * @param cdd a CDD
+ * @return the delayed CDD.
+ */
 cdd cdd_delay(const cdd& state)
 {
     if (cdd_equiv(state, cdd_true()))
         return state;
     uint32_t size = cdd_clocknum;
-    cdd copy= state;
-    cdd res= cdd_false();
+    cdd copy = state;
+    cdd res = cdd_false();
     ADBM(dbm);
     while (!cdd_isterminal(copy.root) && cdd_info(copy.root)->type != TYPE_BDD) {
         copy = cdd_reduce(copy);
@@ -94,13 +105,21 @@ cdd cdd_delay(const cdd& state)
         copy = cdd_extract_dbm(copy, dbm, size);
         copy = cdd_reduce(cdd_remove_negative(copy));
         dbm_up(dbm, size);
-        cdd fixed_cdd = cdd(dbm,size);
+        cdd fixed_cdd = cdd(dbm, size);
         fixed_cdd &= bottom;
         res |= fixed_cdd;
     }
     return res;
 }
 
+/**
+ * Perform the delay operation on a CDD taking an invariant into account.
+ *
+ * @param cdd the cdd to delay
+ * @param cdd the invariant to be taken into account
+ * @return the delayed CDD.
+ * @see cdd_delay
+ */
 cdd cdd_delay_invariant(const cdd& state, const cdd& invar)
 {
     cdd res = cdd_delay(state);
@@ -108,11 +127,22 @@ cdd cdd_delay_invariant(const cdd& state, const cdd& invar)
     return res;
 }
 
+/**
+ * Perform the inverse delay operation on a CDD.
+ *
+ * <p>The inverse delay is performed by extracting all DBMs (and their
+ * corresponding BDD part), delaying the DBMs individually,
+ * and then compose the delayed DBMs back together with their
+ * BDD parts.</p>
+ *
+ * @param cdd a CDD
+ * @return the delayed CDD.
+ */
 cdd cdd_past(const cdd& state)
 {
     uint32_t size = cdd_clocknum;
-    cdd copy= state;
-    cdd res= cdd_false();
+    cdd copy = state;
+    cdd res = cdd_false();
     ADBM(dbm);
     while (!cdd_isterminal(copy.handle()) && cdd_info(copy.handle())->type != TYPE_BDD) {
         copy = cdd_reduce(copy);
@@ -120,7 +150,7 @@ cdd cdd_past(const cdd& state)
         copy = cdd_extract_dbm(copy, dbm, size);
         copy = cdd_reduce(cdd_remove_negative(copy));
         dbm_down(dbm, size);
-        res |= (cdd(dbm,size) & bottom);
+        res |= (cdd(dbm, size) & bottom);
     }
     return res;
 }

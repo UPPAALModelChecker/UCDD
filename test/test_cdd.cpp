@@ -261,6 +261,26 @@ static void test_remove_negative(size_t size)
     REQUIRE(cdd4 != cdd3);
 }
 
+static void test_equiv(size_t size)
+{
+    cdd cdd1, cdd2, cdd3, cdd4;
+    auto dbm1 = dbm_wrap{size};
+    auto dbm2 = dbm_wrap{size};
+
+    // Generate DBMs:
+    dbm1.generate();
+    dbm2.generate();
+
+    // Create CDDs:
+    cdd1 = cdd(dbm1.raw(), size);
+    cdd2 = cdd(dbm2.raw(), size);
+    cdd3 = cdd1 & cdd2;
+    cdd4 = cdd2 & cdd1;
+
+    // Check the result:
+    REQUIRE(cdd_equiv(cdd3, cdd4));
+}
+
 static void test(const char* name, TestFunction f, size_t size)
 {
     cout << name << " size = " << size << endl;
@@ -286,6 +306,7 @@ void big_test(uint32_t n, uint32_t seed)
             test("test_intersection", test_intersection, i);
             test("test_apply_reduce", test_apply_reduce, i);
             test("test_reduce      ", test_reduce, i);
+            test("test_equiv       ", test_equiv, i);
         }
         test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;

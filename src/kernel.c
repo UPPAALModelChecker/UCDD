@@ -79,6 +79,7 @@ int32_t cdd_rehashcnt;    /**< Number of times we have rehashed. */
 int32_t cdd_maxcddsize;   /**< Max. arity of a node. */
 int32_t cdd_maxcddused;   /**< Max. nodes the library may allocate. */
 int32_t cdd_chunkcnt;     /**< Total number of chunks allocated. */
+int32_t bdd_start_level;  /**< BDD start level */
 int32_t cdd_clocknum;     /**< Number of clocks allocated. */
 int32_t cdd_varnum;       /**< Number of BDD variables allocated. */
 LevelInfo* cdd_levelinfo;
@@ -1084,6 +1085,7 @@ int32_t cdd_add_bddvar(int32_t n)
         info++;
         n--;
     }
+    bdd_start_level = offset;
     return offset;
 }
 

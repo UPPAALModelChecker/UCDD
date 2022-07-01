@@ -895,9 +895,9 @@ private:
 /** Structure for returning the results of extractDBM */
 typedef struct extraction_result
 {
-    cdd* CDD_part; /**< The remainder of the CDD after removing a DBM */
-    cdd* BDD_part; /**< The boolean part below a removed DBM */
-    raw_t* dbm;    /**< the removed DBM */
+    cdd CDD_part; /**< The remainder of the CDD after removing a DBM */
+    cdd BDD_part; /**< The boolean part below a removed DBM */
+    raw_t* dbm;   /**< The removed DBM */
 } extraction_result;
 
 /**

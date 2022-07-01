@@ -1161,7 +1161,7 @@ ddNode* cdd_extract_bdd(ddNode* cdd, int32_t size)
 {
     cdd_iterator it;
     LevelInfo* info;
-    ddNode *node;
+    ddNode* node;
 
     node = cdd;
 

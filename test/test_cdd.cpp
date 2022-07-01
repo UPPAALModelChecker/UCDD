@@ -49,6 +49,7 @@ class dbm_wrap
 {
     static inline uint32_t allDBMs = 0;
     static inline uint32_t goodDBMs = 0;
+    size_t sz{};
     std::vector<raw_t> data;
 
 public:
@@ -59,8 +60,8 @@ public:
         allDBMs = 0;
         goodDBMs = 0;
     }
-    explicit dbm_wrap(size_t size): data(size * size) {}
-    uint32_t size() const { return data.size(); }
+    explicit dbm_wrap(size_t size): sz{size}, data(sz * sz) {}
+    uint32_t size() const { return sz; }
     const raw_t* raw() const { return data.data(); }
     raw_t* raw() { return data.data(); }
     bool operator==(const dbm_wrap& other) const
@@ -312,54 +313,34 @@ static void big_test(uint32_t n, uint32_t seed)
     printf("Passed\n");
 }
 
-/*
 TEST_CASE("CDD intersection with size 3")
 {
     cdd_init(100000, 10000, 10000);
     cdd_add_clocks(3);
     test_intersection(3);
 }
- */
+
+// TODO: the bellow case passes only on 32-bit, need to fix it
+#if INTPTR_MAX == INT32_MAX
+TEST_CASE("CDD reduce with size 3")
+{
+    cdd_init(100000, 10000, 10000);
+    cdd_add_clocks(3);
+    test_reduce(3);
+}
+#endif /* 32-bit */
 
 TEST_CASE("Big CDD test with size 0")
 {
     uint32_t seed{};
     srand(seed);
     dbm_wrap::resetCounters();
-    big_test(0, seed);
-}
-
-TEST_CASE("Big CDD test with size 1")
-{
-    uint32_t seed{};
-    srand(seed);
-    dbm_wrap::resetCounters();
-    big_test(1, seed);
-}
-
-TEST_CASE("Big CDD test with size 2")
-{
-    uint32_t seed{};
-    srand(seed);
-    dbm_wrap::resetCounters();
-    big_test(2, seed);
-}
-
-// TODO: on 64-bit the bellow tests are failing, thus disabled :-(
+    SUBCASE("Size 0") { big_test(0, seed); }
+    SUBCASE("Size 1") { big_test(1, seed); }
+    SUBCASE("Size 2") { big_test(2, seed); }
+    // TODO: the bellow cases pass only on 32-bit, need to fix it
 #if INTPTR_MAX == INT32_MAX
-TEST_CASE("Big CDD test with size 3")
-{
-    uint32_t seed{};
-    srand(seed);
-    dbm_wrap::resetCounters();
-    big_test(3, seed);
-}
-
-TEST_CASE("Big CDD test with size 10")
-{
-    uint32_t seed{};
-    srand(seed);
-    dbm_wrap::resetCounters();
-    big_test(10, seed);
-}
+    SUBCASE("Size 3") { big_test(3, seed); }
+    SUBCASE("Size 10") { big_test(10, seed); }
 #endif /* 32-bit */
+}

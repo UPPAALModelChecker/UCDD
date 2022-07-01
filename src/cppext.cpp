@@ -64,7 +64,7 @@ extraction_result cdd_extract_bdd_and_dbm(const cdd& state)
 {
     uint32_t size = cdd_clocknum;
     ADBM(dbm);
-    cdd bdd_part = cdd_extract_bdd(state, dbm, size);
+    cdd bdd_part = cdd_extract_bdd(state, size);
     cdd cdd_part = cdd_extract_dbm(state, dbm, size);
     extraction_result res;
     res.BDD_part = bdd_part;

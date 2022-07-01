@@ -113,7 +113,7 @@ static void test_extract_bdd(size_t size)
     cdd3 = cdd1 & cdd2;
 
     // Extract the DBM and BDD part:
-    cdd4 = cdd_extract_bdd(cdd3, dbm2.raw(), size);
+    cdd4 = cdd_extract_bdd(cdd3, size);
 
     // Check the result:
     REQUIRE(cdd_equiv(cdd4, cdd2));

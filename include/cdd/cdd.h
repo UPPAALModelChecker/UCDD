@@ -594,15 +594,13 @@ extern ddNode* cdd_from_dbm(const raw_t* dbm, int32_t dim);
 extern ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t dim);
 
 /**
- * Extract a BDD from the botten of a given CDD
- * \a cdd and write it to \a dbm.  It will return a CDD equivalent to
- * \a cdd \ \c cdd_from_dbm(dbm).
+ * Extract a BDD from the bottom of a given CDD.
  * PRECONDITION: call CDD reduce first!!!
  * @param cdd a cdd
  * @param dbm a dbm
  * @return the difference between \a cdd and \a dbm
  */
-extern ddNode* cdd_extract_bdd(ddNode* cdd, raw_t* dbm, int32_t dim);
+extern ddNode* cdd_extract_bdd(ddNode* cdd, int32_t dim);
 
 /**
  * Print a CDD \a r as a dot input file \a ofile.\n\n
@@ -874,7 +872,7 @@ private:
     friend cdd cdd_reduce2(const cdd&);
     friend bool cdd_contains(const cdd&, raw_t* dbm, int32_t dim);
     friend cdd cdd_extract_dbm(const cdd&, raw_t* dbm, int32_t dim);
-    friend cdd cdd_extract_bdd(const cdd&, raw_t* dbm, int32_t dim);
+    friend cdd cdd_extract_bdd(const cdd&, int32_t dim);
     friend extraction_result cdd_extract_bdd_and_dbm(const cdd&);
     friend void cdd_fprintdot(FILE* ofile, const cdd&, bool push_negate);
     friend void cdd_printdot(const cdd&, bool push_negate);
@@ -1070,11 +1068,10 @@ inline cdd cdd_extract_dbm(const cdd& r, raw_t* dbm, int32_t dim) { return cdd(c
 /**
  * Extract the bottom BDD of the first DBM in a given CDD.
  * @param cdd a cdd
- * @param dbm a dbm
  * @param dim the dimension of the dbm
  * @return the difference between \a cdd and \a dbm
  */
-inline cdd cdd_extract_bdd(const cdd& r, raw_t* dbm, int32_t dim) { return cdd(cdd_extract_bdd(r.root, dbm, dim)); }
+inline cdd cdd_extract_bdd(const cdd& r, int32_t dim) { return cdd(cdd_extract_bdd(r.root, dim)); }
 
 /**
  * Print a CDD \a r as a dot input file \a ofile. You can use the dot

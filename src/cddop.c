@@ -1157,7 +1157,7 @@ ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t size)
     return result;
 }
 
-ddNode* cdd_extract_bdd(ddNode* cdd, raw_t* dbm, int32_t size)
+ddNode* cdd_extract_bdd(ddNode* cdd, int32_t size)
 {
     cdd_iterator it;
     LevelInfo* info;
@@ -1165,8 +1165,6 @@ ddNode* cdd_extract_bdd(ddNode* cdd, raw_t* dbm, int32_t size)
     uint32_t touched[bits2intsize(size)];
 
     node = cdd;
-
-    dbm_init(dbm, size);
 
     base_resetBits(touched, bits2intsize(size));
 

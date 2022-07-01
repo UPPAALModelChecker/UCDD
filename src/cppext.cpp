@@ -92,7 +92,7 @@ cdd cdd_delay(const cdd& state)
         copy = cdd_reduce(copy);
         cdd bottom = cdd_extract_bdd(copy, size);
         copy = cdd_extract_dbm(copy, dbm, size);
-        copy = cdd_reduce(copy);
+        copy = cdd_reduce(cdd_remove_negative(copy));
         dbm_up(dbm, size);
         cdd fixed_cdd = cdd(dbm,size);
         fixed_cdd &= bottom;
@@ -118,7 +118,7 @@ cdd cdd_past(const cdd& state)
         copy = cdd_reduce(copy);
         cdd bottom = cdd_extract_bdd(copy, size);
         copy = cdd_extract_dbm(copy, dbm, size);
-        copy = cdd_reduce(copy);
+        copy = cdd_reduce(cdd_remove_negative(copy));
         dbm_down(dbm, size);
         res |= (cdd(dbm,size) & bottom);
     }

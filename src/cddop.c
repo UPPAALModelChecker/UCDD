@@ -1161,12 +1161,9 @@ ddNode* cdd_extract_bdd(ddNode* cdd, int32_t size)
 {
     cdd_iterator it;
     LevelInfo* info;
-    ddNode *node, *zone, *result;
-    uint32_t touched[bits2intsize(size)];
+    ddNode *node;
 
     node = cdd;
-
-    base_resetBits(touched, bits2intsize(size));
 
     while (!(cdd_isterminal(node))) {
         info = cdd_info(node);

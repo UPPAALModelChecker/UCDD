@@ -67,7 +67,9 @@ public:
     void generate()
     {
         bool good = dbm_generate(raw(), size(), RANGE());
+        assert(allDBMs < std::numeric_limits<decltype(allDBMs)>::max());
         allDBMs++;
+        assert(goodDBMs < std::numeric_limits<decltype(goodDBMs)>::max() - good);
         goodDBMs += good;
     }
 };

@@ -869,6 +869,9 @@ private:
     friend cdd cdd_ite(const cdd&, const cdd&, const cdd&);
     friend cdd cdd_reduce(const cdd&);
     friend bool cdd_equiv(const cdd&, const cdd&);
+    friend cdd cdd_delay(const cdd&);
+    friend cdd cdd_past(const cdd&);
+    friend cdd cdd_delay_invariant(const cdd&, const cdd&);
     friend cdd cdd_reduce2(const cdd&);
     friend bool cdd_contains(const cdd&, raw_t* dbm, int32_t dim);
     friend cdd cdd_extract_dbm(const cdd&, raw_t* dbm, int32_t dim);

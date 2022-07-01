@@ -14,7 +14,6 @@
 
 #include "dbm/dbm.h"
 #include "dbm/gen.h"
-#include "dbm/print.h"
 #include "cdd/cdd.h"
 #include "cdd/debug.h"
 #include "cdd/kernel.h"
@@ -22,11 +21,11 @@
 #include "debug/macros.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include <doctest/doctest.h>
+
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
-
-#include <doctest/doctest.h>
 
 using std::endl;
 using std::cerr;
@@ -42,22 +41,32 @@ using base::Timer;
 /** Show progress */
 #define PROGRESS() debug_spin(stderr)
 
-typedef void (*TestFunction)(size_t size);
+using TestFunction = void (*)(size_t size);
 
 /** Wraps raw dbm (array of raw_t) and provides pretty-printing of them. */
 class dbm_wrap
 {
     static inline uint32_t allDBMs = 0;
     static inline uint32_t goodDBMs = 0;
+    size_t sz{};
     std::vector<raw_t> data;
 
 public:
     static uint32_t get_allDBMs() { return allDBMs; }
     static uint32_t get_goodDBMs() { return goodDBMs; }
-    explicit dbm_wrap(size_t size): data(size, 0) {}
-    uint32_t size() const { return data.size(); }
-    const raw_t* raw() const { return data.data(); }
-    raw_t* raw() { return data.data(); }
+    static void resetCounters()
+    {
+        allDBMs = 0;
+        goodDBMs = 0;
+    }
+    explicit dbm_wrap(size_t size): sz{size}, data(sz * sz)
+    {
+        REQUIRE(size <= std::numeric_limits<uint32_t>::max());
+        REQUIRE(size * size <= std::numeric_limits<uint32_t>::max());
+    }
+    [[nodiscard]] uint32_t size() const { return static_cast<uint32_t>(sz); }
+    [[nodiscard]] const raw_t* raw() const { return data.data(); }
+    [[nodiscard]] raw_t* raw() { return data.data(); }
     bool operator==(const dbm_wrap& other) const
     {
         return size() == other.size() && dbm_areEqual(raw(), other.raw(), size());
@@ -67,15 +76,24 @@ public:
     void generate()
     {
         bool good = dbm_generate(raw(), size(), RANGE());
+        assert(allDBMs < std::numeric_limits<decltype(allDBMs)>::max());
         allDBMs++;
+        assert(goodDBMs < std::numeric_limits<decltype(goodDBMs)>::max() - good);
         goodDBMs += good;
     }
 };
 
 std::ostream& operator<<(std::ostream& os, const dbm_wrap& d)
 {
-    // TODO: hookup pretty-printing function call for DBM
-    return os << "dbm@" << d.raw();
+    os << "dbm{" << d.raw();
+    for (auto i = 0u; i < d.size(); ++i) {
+        os << ((i == 0) ? "{" : ",{");
+        os << d.raw()[i * d.size()];
+        for (auto j = 1u; j < d.size(); ++j)
+            os << "," << d.raw()[i * d.size() + j];
+        os << "}";
+    }
+    return os << "}";
 }
 
 /** test conversion between CDD and DBMs */
@@ -192,8 +210,11 @@ static double time_bf = 0;
 
 std::ostream& operator<<(std::ostream& os, const cdd& d)
 {
-    // TODO: hookup pretty-printing function call for CDD
-    os << "cdd@" << &d;
+    static size_t cdd_log_counter = 0;
+    auto cdd_log = std::string{"cdd_"} + std::to_string(++cdd_log_counter) + ".dot";
+    auto file = std::fopen(cdd_log.c_str(), "w");
+    cdd_fprintdot(file, d, false);
+    os << "cdd@" << &d << "(" << cdd_log << ")";
     return os;
 }
 
@@ -244,7 +265,7 @@ static void test_remove_negative(size_t size)
     cdd2 = cdd_remove_negative(cdd1);
 
     // cdd_extract_dbm has build-in assertions to verify that the extracted dbm is valid.
-    // So successfully executing the line below means that the negative part of the cdd has
+    // So successfully executing the line bellow means that the negative part of the cdd has
     // been removed successfully.
     cdd3 = cdd_extract_dbm(cdd2, dbm.raw(), size);
 
@@ -290,7 +311,7 @@ static void test(const char* name, TestFunction f, size_t size)
     }
 }
 
-void big_test(uint32_t n, uint32_t seed)
+static void big_test(uint32_t n, uint32_t seed)
 {
     cdd_init(100000, 10000, 10000);
     cdd_add_clocks(n);
@@ -326,24 +347,34 @@ void big_test(uint32_t n, uint32_t seed)
     printf("Passed\n");
 }
 
+TEST_CASE("CDD intersection with size 3")
+{
+    cdd_init(100000, 10000, 10000);
+    cdd_add_clocks(3);
+    test_intersection(3);
+}
+
+// TODO: the bellow test case passes only on 32-bit, need to fix it
 #if INTPTR_MAX == INT32_MAX
-#define ENABLE_32BIT_TEST
-#endif /* 32-bit target */
+TEST_CASE("CDD reduce with size 3")
+{
+    cdd_init(100000, 10000, 10000);
+    cdd_add_clocks(3);
+    test_reduce(3);
+}
+#endif /* 32-bit */
 
 TEST_CASE("Big CDD test")
 {
     uint32_t seed{};
     srand(seed);
-    SUBCASE("size 0") { big_test(0, seed); }
-
-    SUBCASE("size 1") { big_test(1, seed); }
-
-    SUBCASE("size 2") { big_test(2, seed); }
-
-    // TODO: on 64-bit the bellow tests are failing :-(
-#ifdef ENABLE_32BIT_TEST
-    SUBCASE("size 3") { big_test(3, seed); }
-
-    SUBCASE("size 10") { big_test(10, seed); }
-#endif
+    dbm_wrap::resetCounters();
+    SUBCASE("Size 0") { big_test(0, seed); }
+    SUBCASE("Size 1") { big_test(1, seed); }
+    SUBCASE("Size 2") { big_test(2, seed); }
+    // TODO: the bellow cases pass only on 32-bit, need to fix it
+#if INTPTR_MAX == INT32_MAX
+    SUBCASE("Size 3") { big_test(3, seed); }
+    SUBCASE("Size 10") { big_test(10, seed); }
+#endif /* 32-bit */
 }

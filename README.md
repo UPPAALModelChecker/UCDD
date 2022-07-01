@@ -21,8 +21,40 @@ In addition, [UUtils](https://github.com/UPPAALModelChecker/UUtils) and [UDBM](h
 
 Get the dependencies, compile the source into `build` directory and run the unit tests:
 ```sh
+unset CMAKE_TOOLCHAIN_FILE # If it was set before
 ./getlibs.sh # If UUtils and UDBM are not installed system-wide
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DTESTING=ON
+cmake -B build -DTESTING=ON
 cmake --build build
 (cd build ; ctest --output-on-failure)
 ```
+
+### Cross-compile For Linux 32-bit (i686):
+```sh
+export CMAKE_TOOLCHAIN_FILE=$PWD/toolchains/i686-linux.cmake 
+./getlibs.sh
+cmake -B build-linux32 -DTESTING=ON
+cmake --build build-linux32
+(cd build-linux32 ; ctest --output-on-failure)
+```
+
+### Cross-compile For Windows 64-bit (x64_86) using MinGW/[MSYS2](https://www.msys2.org/):
+```sh
+export CMAKE_TOOLCHAIN_FILE=$PWD/toolchains/x86_64-w64-mingw32.cmake
+./getlibs.sh
+cmake -B build-win64 -DTESTING=ON -DSTATIC=ON
+cmake --build build-win64
+(cd build-win64 ; ctest --output-on-failure)
+```
+
+### Cross-compile For Windows 32-bit (i686) using MinGW/[MSYS2](https://www.msys2.org/):
+```sh
+export CMAKE_TOOLCHAIN_FILE=$PWD/toolchains/i686-w64-mingw32.cmake
+./getlibs.sh
+cmake -B build-win32 -DTESTING=ON -DSTATIC=ON
+cmake --build build-win32
+(cd build-win32 ; ctest --output-on-failure)
+```
+
+## Debugging
+Address-sanitizer can be enabled by adding `-DASAN=ON` option to `cmake` build generation line.
+This relies on the compiler support (currently GCC does not support sanitizers on Windows).

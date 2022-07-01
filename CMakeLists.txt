@@ -11,10 +11,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(MULTI_TERMINAL 1)
 CONFIGURE_FILE("src/config.h.cmake" "include/cdd/config.h")
 
-set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${CMAKE_CURRENT_SOURCE_DIR}/libs")
-find_package(xxHash 0.8.0 REQUIRED COMPONENTS xxhash PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs/xxHash)
-find_package(UUtils 1.1.1 REQUIRED PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs/UUtils)
-find_package(UDBM 2.0.11 REQUIRED PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs/UDBM)
+if(CMAKE_TOOLCHAIN_FILE)
+    get_filename_component(TARGET ${CMAKE_TOOLCHAIN_FILE} NAME_WLE)
+    set(LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs-${TARGET}")
+else(CMAKE_TOOLCHAIN_FILE)
+    set(LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs")
+endif(CMAKE_TOOLCHAIN_FILE)
+message(STATUS "Using libs in ${LIBS_DIR}")
+
+set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${LIBS_DIR}")
+find_package(xxHash 0.8.0 REQUIRED COMPONENTS xxhash PATHS ${LIBS_DIR}/xxHash)
+find_package(UUtils 1.1.1 REQUIRED PATHS ${LIBS_DIR}/UUtils)
+find_package(UDBM 2.0.11 REQUIRED PATHS ${LIBS_DIR}/UDBM)
 
 include_directories(
     PRIVATE
@@ -34,17 +42,18 @@ if(STATIC)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
 endif(STATIC)
 
+if (ASAN)
+    add_compile_options(-fno-omit-frame-pointer -fsanitize=address)
+    add_link_options(-fno-omit-frame-pointer -fsanitize=address)
+    message(STATUS "Using Address Sanitizer")
+endif(ASAN)
+
 add_subdirectory("src")
 
 if(TESTING)
     enable_testing()
     add_subdirectory("test")
 endif(TESTING)
-
-if (ASAN)
-    add_compile_options(-fsanitize=address)
-    add_link_options(-fsanitize=address)
-endif(ASAN)
 
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/UCDDConfigVersion.cmake VERSION ${PACKAGE_VERSION} COMPATIBILITY SameMajorVersion)
 

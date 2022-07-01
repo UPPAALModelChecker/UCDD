@@ -41,7 +41,7 @@ using base::Timer;
 /** Show progress */
 #define PROGRESS() debug_spin(stderr)
 
-typedef void (*TestFunction)(size_t size);
+using TestFunction = void (*)(size_t size);
 
 /** Wraps raw dbm (array of raw_t) and provides pretty-printing of them. */
 class dbm_wrap
@@ -59,10 +59,14 @@ public:
         allDBMs = 0;
         goodDBMs = 0;
     }
-    explicit dbm_wrap(size_t size): sz{size}, data(sz * sz) {}
-    uint32_t size() const { return sz; }
-    const raw_t* raw() const { return data.data(); }
-    raw_t* raw() { return data.data(); }
+    explicit dbm_wrap(size_t size): sz{size}, data(sz * sz)
+    {
+        REQUIRE(size <= std::numeric_limits<uint32_t>::max());
+        REQUIRE(size * size <= std::numeric_limits<uint32_t>::max());
+    }
+    [[nodiscard]] uint32_t size() const { return static_cast<uint32_t>(sz); }
+    [[nodiscard]] const raw_t* raw() const { return data.data(); }
+    [[nodiscard]] raw_t* raw() { return data.data(); }
     bool operator==(const dbm_wrap& other) const
     {
         return size() == other.size() && dbm_areEqual(raw(), other.raw(), size());
@@ -261,7 +265,7 @@ static void test_remove_negative(size_t size)
     cdd2 = cdd_remove_negative(cdd1);
 
     // cdd_extract_dbm has build-in assertions to verify that the extracted dbm is valid.
-    // So successfully executing the line below means that the negative part of the cdd has
+    // So successfully executing the line bellow means that the negative part of the cdd has
     // been removed successfully.
     cdd3 = cdd_extract_dbm(cdd2, dbm.raw(), size);
 
@@ -329,7 +333,7 @@ TEST_CASE("CDD intersection with size 3")
     test_intersection(3);
 }
 
-// TODO: the bellow case passes only on 32-bit, need to fix it
+// TODO: the bellow test case passes only on 32-bit, need to fix it
 #if INTPTR_MAX == INT32_MAX
 TEST_CASE("CDD reduce with size 3")
 {
@@ -339,7 +343,7 @@ TEST_CASE("CDD reduce with size 3")
 }
 #endif /* 32-bit */
 
-TEST_CASE("Big CDD test with size 0")
+TEST_CASE("Big CDD test")
 {
     uint32_t seed{};
     srand(seed);

@@ -1062,14 +1062,16 @@ inline cdd cdd_reduce2(const cdd& r) { return cdd(cdd_reduce2(r.root)); }
  * \a cdd \ \c cdd_from_dbm(dbm).
  * @param cdd a cdd
  * @param dbm a dbm
+ * @param dim the dimension of the dbm
  * @return the difference between \a cdd and \a dbm
  */
 inline cdd cdd_extract_dbm(const cdd& r, raw_t* dbm, int32_t dim) { return cdd(cdd_extract_dbm(r.root, dbm, dim)); }
 
 /**
- * Extract the bottom BDD of the first DBM in a given CDD
+ * Extract the bottom BDD of the first DBM in a given CDD.
  * @param cdd a cdd
  * @param dbm a dbm
+ * @param dim the dimension of the dbm
  * @return the difference between \a cdd and \a dbm
  */
 inline cdd cdd_extract_bdd(const cdd& r, raw_t* dbm, int32_t dim) { return cdd(cdd_extract_bdd(r.root, dbm, dim)); }

@@ -11,6 +11,11 @@
 
 #include "cdd/kernel.h"
 
+#define ADBM(NAME) raw_t* NAME = allocDBM(size)
+
+/* Allocate a DBM. */
+static raw_t* allocDBM(uint32_t dim) { return (raw_t*)malloc(dim * dim * sizeof(raw_t)); }
+
 cdd::cdd(const cdd& r)
 {
     assert(cdd_isrunning());

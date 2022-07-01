@@ -100,6 +100,25 @@ static void test_conversion(size_t size)
     REQUIRE(cdd_reduce(cdd2) == cdd_false());
 }
 
+static void test_extract_bdd(size_t size)
+{
+    cdd cdd1, cdd2, cdd3, cdd4;
+    auto dbm1 = dbm_wrap{size};
+    auto dbm2 = dbm_wrap{size};
+
+    // Create DBM and CDDs:
+    dbm1.generate();
+    cdd1 = cdd{dbm1.raw(), dbm1.size()};
+    cdd2 = cdd_bddvarpp(bdd_start_level + size - 1);
+    cdd3 = cdd1 & cdd2;
+
+    // Extract the DBM and BDD part:
+    cdd4 = cdd_extract_bdd(cdd3, dbm2.raw(), size);
+
+    // Check the result:
+    REQUIRE(cdd_equiv(cdd4, cdd2));
+}
+
 /* test intersection of CDDs
  */
 static void test_intersection(size_t size)
@@ -294,6 +313,7 @@ void big_test(uint32_t n, uint32_t seed)
 {
     cdd_init(100000, 10000, 10000);
     cdd_add_clocks(n);
+    cdd_add_bddvar(n);
 
     for (uint32_t j = 1; j <= 10; ++j) {
         uint32_t DBM_sofar = dbm_wrap::get_allDBMs();
@@ -307,6 +327,7 @@ void big_test(uint32_t n, uint32_t seed)
             test("test_apply_reduce", test_apply_reduce, i);
             test("test_reduce      ", test_reduce, i);
             test("test_equiv       ", test_equiv, i);
+            test("test_extract_bdd ", test_extract_bdd, i);
         }
         test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;

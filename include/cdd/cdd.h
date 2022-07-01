@@ -586,11 +586,21 @@ extern ddNode* cdd_from_dbm(const raw_t* dbm, int32_t dim);
  * Extract a zone from a CDD.  This function will extract a zone from
  * \a cdd and write it to \a dbm.  It will return a CDD equivalent to
  * \a cdd \ \c cdd_from_dbm(dbm).
+ * PRECONDITION: call CDD reduce first!!!
  * @param cdd a cdd
  * @param dbm a dbm
  * @return the difference between \a cdd and \a dbm
  */
 extern ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t dim);
+
+/**
+ * Extract a BDD from the bottom of a given CDD.
+ * PRECONDITION: call CDD reduce first!!!
+ * @param cdd a cdd
+ * @param dbm a dbm
+ * @return the difference between \a cdd and \a dbm
+ */
+extern ddNode* cdd_extract_bdd(ddNode* cdd, int32_t dim);
 
 /**
  * Print a CDD \a r as a dot input file \a ofile.\n\n
@@ -728,6 +738,8 @@ extern ddNode* cddtrue;
  * @{
  */
 
+struct extraction_result;
+
 /**
  * C++ encapsulation of a decision diagram node (a ddNode). The class
  * maintains a reference to the node throughout its lifetime.
@@ -860,6 +872,8 @@ private:
     friend cdd cdd_reduce2(const cdd&);
     friend bool cdd_contains(const cdd&, raw_t* dbm, int32_t dim);
     friend cdd cdd_extract_dbm(const cdd&, raw_t* dbm, int32_t dim);
+    friend cdd cdd_extract_bdd(const cdd&, int32_t dim);
+    friend extraction_result cdd_extract_bdd_and_dbm(const cdd&);
     friend void cdd_fprintdot(FILE* ofile, const cdd&, bool push_negate);
     friend void cdd_printdot(const cdd&, bool push_negate);
     friend void cdd_fprint_code(FILE* ofile, const cdd&, cdd_print_varloc_f printer1, cdd_print_clockdiff_f printer2,
@@ -875,6 +889,14 @@ private:
 };
 
 /*=== Inline C++ interface ============================================*/
+
+/** Structure for returning the results of extractDBM */
+typedef struct extraction_result
+{
+    cdd CDD_part; /**< The remainder of the CDD after removing a DBM */
+    cdd BDD_part; /**< The boolean part below a removed DBM */
+    raw_t* dbm;   /**< The removed DBM */
+} extraction_result;
 
 /**
  * Returns true if \a dbm is included in the CDD.
@@ -1038,9 +1060,18 @@ inline cdd cdd_reduce2(const cdd& r) { return cdd(cdd_reduce2(r.root)); }
  * \a cdd \ \c cdd_from_dbm(dbm).
  * @param cdd a cdd
  * @param dbm a dbm
+ * @param dim the dimension of the dbm
  * @return the difference between \a cdd and \a dbm
  */
 inline cdd cdd_extract_dbm(const cdd& r, raw_t* dbm, int32_t dim) { return cdd(cdd_extract_dbm(r.root, dbm, dim)); }
+
+/**
+ * Extract the bottom BDD of the first DBM in a given CDD.
+ * @param cdd a cdd
+ * @param dim the dimension of the dbm
+ * @return the difference between \a cdd and \a dbm
+ */
+inline cdd cdd_extract_bdd(const cdd& r, int32_t dim) { return cdd(cdd_extract_bdd(r.root, dim)); }
 
 /**
  * Print a CDD \a r as a dot input file \a ofile. You can use the dot

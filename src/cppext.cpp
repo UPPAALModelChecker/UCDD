@@ -11,6 +11,11 @@
 
 #include "cdd/kernel.h"
 
+#define ADBM(NAME) raw_t* NAME = allocDBM(size)
+
+/* Allocate a DBM. */
+static raw_t* allocDBM(uint32_t dim) { return (raw_t*)malloc(dim * dim * sizeof(raw_t)); }
+
 cdd::cdd(const cdd& r)
 {
     assert(cdd_isrunning());
@@ -53,4 +58,24 @@ cdd cdd::operator=(ddNode* node)
         cdd_ref(root);
     }
     return *this;
+}
+
+/**
+ * Extract a BDD and DBM from a given CDD.
+ * PRECONDITION: call CDD reduce first!!!
+ * @param cdd a cdd
+ * @return the extraction result containing the extracted BDD,
+ *      extracted DBM ,and the remaining cdd.
+ */
+extraction_result cdd_extract_bdd_and_dbm(const cdd& state)
+{
+    uint32_t size = cdd_clocknum;
+    ADBM(dbm);
+    cdd bdd_part = cdd_extract_bdd(state, size);
+    cdd cdd_part = cdd_extract_dbm(state, dbm, size);
+    extraction_result res;
+    res.BDD_part = bdd_part;
+    res.CDD_part = cdd_part;
+    res.dbm = dbm;
+    return res;
 }

@@ -113,10 +113,30 @@ static void test_extract_bdd(size_t size)
     cdd3 = cdd1 & cdd2;
 
     // Extract the DBM and BDD part:
-    cdd4 = cdd_extract_bdd(cdd3, size);
+    cdd4 = cdd_extract_bdd(cdd_reduce(cdd3), size);
 
     // Check the result:
     REQUIRE(cdd_equiv(cdd4, cdd2));
+}
+
+static void test_extract_bdd_and_dbm(size_t size)
+{
+    cdd cdd1, cdd2, cdd3;
+    auto dbm1 = dbm_wrap{size};
+
+    // Create DBM and CDDs:
+    dbm1.generate();
+    cdd1 = cdd{dbm1.raw(), dbm1.size()};
+    cdd2 = cdd_bddvarpp(bdd_start_level + size - 1);
+    cdd3 = cdd1 & cdd2;
+
+    // Extract the DBM and BDD part:
+    REQUIRE(cdd_contains(cdd3, dbm1.raw(), dbm1.size()));
+    extraction_result er = cdd_extract_bdd_and_dbm(cdd_reduce(cdd3));
+
+    // Check the result:
+    REQUIRE(dbm_areEqual(er.dbm, dbm1.raw(), size));
+    REQUIRE(cdd_equiv(er.BDD_part, cdd2));
 }
 
 /* test intersection of CDDs
@@ -328,6 +348,7 @@ void big_test(uint32_t n, uint32_t seed)
             test("test_reduce      ", test_reduce, i);
             test("test_equiv       ", test_equiv, i);
             test("test_extract_bdd ", test_extract_bdd, i);
+            test("test_extract_bdd_and_dbm", test_extract_bdd_and_dbm, i);
         }
         test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;

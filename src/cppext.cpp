@@ -60,6 +60,13 @@ cdd cdd::operator=(ddNode* node)
     return *this;
 }
 
+/**
+ * Extract a BDD and DBM from a given CDD.
+ * PRECONDITION: call CDD reduce first!!!
+ * @param cdd a cdd
+ * @return the extraction result containing the extracted BDD,
+ *      extracted DBM ,and the remaining cdd.
+ */
 extraction_result cdd_extract_bdd_and_dbm(const cdd& state)
 {
     uint32_t size = cdd_clocknum;

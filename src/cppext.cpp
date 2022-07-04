@@ -163,6 +163,7 @@ cdd cdd_predt(const cdd&  target, const cdd&  safe)
                 dbm_print(stdout, dbm_good, size);
                 cdd bdd_good = res_good.BDD_part;
                 good_fed->add(dbm_good, size);
+                bdd_parts_reached |=bdd_good&bdd_target;
             }
 
             dbm::fed_t pred_fed = bad_fed->predt(*good_fed);
@@ -172,8 +173,11 @@ cdd cdd_predt(const cdd&  target, const cdd&  safe)
             allThatKillsUs |= cdd_from_fed(pred_fed);//&  bdd_target);
             cdd_printdot(allThatKillsUs,true);
 
-            bdd_parts_reached |=  bdd_target;
             // for all boolean valuations we did not reach with our safe CDD, we take the past of the current target DBM
+            cdd bdd_parts_not_reached = cdd_true() - bdd_parts_reached;
+            dbm_down(dbm_target,size);
+            cdd past = cdd (dbm_target, size) & bdd_parts_not_reached;
+            allThatKillsUs |= past;
 
         }
         else

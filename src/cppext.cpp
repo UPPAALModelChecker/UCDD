@@ -93,7 +93,9 @@ extraction_result cdd_extract_bdd_and_dbm(const cdd& state)
  */
 cdd cdd_delay(const cdd& state)
 {
-    if (cdd_equiv(state, cdd_true()))
+    if (cdd_isterminal(state.root))
+        return state;
+    if (cdd_info(state.root)->type == TYPE_BDD)
         return state;
     uint32_t size = cdd_clocknum;
     cdd copy = state;

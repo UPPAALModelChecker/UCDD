@@ -387,6 +387,91 @@ void delay_test(size_t size)
     REQUIRE(cdd_equiv(cdd_delay(result3), result2 & bdd_part));
 }
 
+void delay_invariant_test(size_t size)
+{
+    // First some trivial cases.
+    REQUIRE(cdd_delay_invariant(cdd_true(), cdd_true()) == cdd_true());
+    REQUIRE(cdd_delay_invariant(cdd_false(), cdd_true()) == cdd_false());
+    REQUIRE(cdd_delay_invariant(cdd_true(), cdd_false()) == cdd_false());
+    REQUIRE(cdd_delay_invariant(cdd_false(), cdd_false()) == cdd_false());
+
+    // Delay CDDs consisting of only clock differences.
+    // Delaying them before disjunction should be the same as after disjunction
+    cdd result1 = cdd_false();
+    cdd result2 = cdd_false();
+    auto dbm = dbm_wrap{size};
+    int n_dbms = 8;
+
+    for (uint32_t i = 0; i < n_dbms; i++) {
+        dbm.generate();
+        cdd cdd1 = cdd(dbm.raw(), dbm.size());
+        result1 |= cdd1;
+        result2 |= cdd_delay_invariant(cdd1, cdd_true());
+    }
+
+    REQUIRE(cdd_equiv(cdd_delay_invariant(result1, cdd_true()), result2));
+    REQUIRE(cdd_equiv(cdd_delay_invariant(result1, cdd_true()), cdd_delay(result1)));
+
+    // Create a random BDD.
+    cdd bdd_part = cdd_true();
+    for (uint32_t i = 0; i < size; i++) {
+        cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
+        if (RANDOMBOOL())
+            bdd_node = !bdd_node;
+        if (RANDOMBOOL()) {
+            bdd_part &= bdd_node;
+        } else {
+            bdd_part |= bdd_node;
+        }
+    }
+
+    cdd result3 = result1 & bdd_part;
+
+    // The delay operator should not influence the BDD part.
+    REQUIRE(cdd_equiv(cdd_delay_invariant(result3, cdd_true()), result2 & bdd_part));
+}
+
+void past_test(size_t size)
+{
+    // First some trivial cases.
+    REQUIRE(cdd_past(cdd_true()) == cdd_true());
+    REQUIRE(cdd_past(cdd_false()) == cdd_false());
+
+    // Delay CDDs consisting of only clock differences.
+    // Delaying them before disjunction should be the same as after disjunction
+    cdd result1 = cdd_false();
+    cdd result2 = cdd_false();
+    auto dbm = dbm_wrap{size};
+    int n_dbms = 8;
+
+    for (uint32_t i = 0; i < n_dbms; i++) {
+        dbm.generate();
+        cdd cdd1 = cdd(dbm.raw(), dbm.size());
+        result1 |= cdd1;
+        result2 |= cdd_past(cdd1);
+    }
+
+    REQUIRE(cdd_equiv(cdd_past(result1), result2));
+
+    // Create a random BDD.
+    cdd bdd_part = cdd_true();
+    for (uint32_t i = 0; i < size; i++) {
+        cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
+        if (RANDOMBOOL())
+            bdd_node = !bdd_node;
+        if (RANDOMBOOL()) {
+            bdd_part &= bdd_node;
+        } else {
+            bdd_part |= bdd_node;
+        }
+    }
+
+    cdd result3 = result1 & bdd_part;
+
+    // The delay operator should not influence the BDD part.
+    REQUIRE(cdd_equiv(cdd_past(result3), result2 & bdd_part));
+}
+
 static void test(const char* name, TestFunction f, size_t size)
 {
     cout << name << " size = " << size << endl;
@@ -417,6 +502,8 @@ static void big_test(uint32_t n, uint32_t seed)
             test("test_extract_bdd ", test_extract_bdd, i);
             test("test_extract_bdd_and_dbm", test_extract_bdd_and_dbm, i);
             test("delay_test       ", delay_test, i);
+            test("delay_invariant_test", delay_invariant_test, i);
+            test("past_test        ", past_test, i);
         }
         test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;

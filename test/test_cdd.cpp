@@ -34,6 +34,7 @@ using base::Timer;
 
 /** Random range, may change definition */
 #define RANGE()      ((rand() % 10000) + 1)
+#define RANDOMINT(n) ((rand() % n))
 #define RANDOMBOOL() (rand() > (RAND_MAX / 2))
 
 /** Print the difference between two DBMs two stdout. */
@@ -472,6 +473,73 @@ void past_test(size_t size)
     REQUIRE(cdd_equiv(cdd_past(result3), result2 & bdd_part));
 }
 
+void exist_test(size_t size)
+{
+    // First some trivial cases.
+    REQUIRE(cdd_exist(cdd_true(), NULL, NULL, size, size) == cdd_true());
+    REQUIRE(cdd_exist(cdd_false(), NULL, NULL, size, size) == cdd_false());
+
+    // Create a CDD containing random DBMs.
+    cdd cdd_part;
+    auto dbm = dbm_wrap{size};
+    int n_dbms = 8;
+
+    for (uint32_t i = 0; i < n_dbms; i++) {
+        dbm.generate();
+        cdd_part |= cdd(dbm.raw(), dbm.size());
+    }
+
+    // Create a random BDD.
+    cdd bdd_part = cdd_true();
+    for (uint32_t i = 0; i < size; i++) {
+        cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
+        if (RANDOMBOOL())
+            bdd_node = !bdd_node;
+        if (RANDOMBOOL()) {
+            bdd_part &= bdd_node;
+        } else {
+            bdd_part |= bdd_node;
+        }
+    }
+    cdd result = cdd_part & bdd_part;
+
+    // Select randomly a clock and a boolean variable
+    const int num_bools = 1;
+    const int num_clocks = 1;
+    int arr[num_clocks] = {(int)RANDOMINT(size)};
+    int* clockPtr = arr;
+    int arr1[num_bools] = {(int)RANDOMINT(size) + bdd_start_level};
+    int* boolPtr = arr1;
+
+    // Perform the existential quantification for the chosen clock and boolean variables
+    cdd result1 = cdd_exist(result, boolPtr, clockPtr, num_bools, num_clocks);
+    result1 = cdd_reduce(result1);
+
+    if (size == 1)
+        REQUIRE(cdd_equiv(result1, cdd_true()));
+    // TODO how to check correct result for size > 1?
+
+    // Performing the identical operation multiple times should not change the result
+    cdd result2 = cdd_exist(result1, boolPtr, clockPtr, num_bools, num_clocks);
+    result2 = cdd_reduce(result2);
+    REQUIRE(cdd_equiv(result1, result2));
+
+    // The order of existential quantification should not matter
+    cdd result3 = cdd_exist(result, boolPtr, NULL, num_bools, 0);
+    result3 = cdd_reduce(result3);
+    cdd result4 = cdd_exist(result3, NULL, clockPtr, 0, num_clocks);
+    result4 = cdd_reduce(result4);
+
+    cdd result5 = cdd_exist(result, NULL, clockPtr, 0, num_clocks);
+    result5 = cdd_reduce(result5);
+    cdd result6 = cdd_exist(result5, boolPtr, NULL, num_bools, 0);
+    result6 = cdd_reduce(result6);
+
+    REQUIRE(cdd_equiv(result1, result4));
+    REQUIRE(cdd_equiv(result1, result6));
+    REQUIRE(cdd_equiv(result4, result6));
+}
+
 static void test(const char* name, TestFunction f, size_t size)
 {
     cout << name << " size = " << size << endl;
@@ -504,6 +572,7 @@ static void big_test(uint32_t n, uint32_t seed)
             test("delay_test       ", delay_test, i);
             test("delay_invariant_test", delay_invariant_test, i);
             test("past_test        ", past_test, i);
+            test("exist_test       ", exist_test, i);
         }
         test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;

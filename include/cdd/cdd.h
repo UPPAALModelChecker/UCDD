@@ -987,19 +987,27 @@ inline cdd cdd_bddnvarpp(int32_t level) { return cdd(cdd_neg(cdd_bddvar(level)))
 
 /**
  * Returns the CDD corresponding to a tautology.
- * @return The cdd corresponding to a tautology.
+ * @return the cdd corresponding to a tautology.
  */
 inline cdd cdd_true() { return cdd(cddtrue); }
 
 /**
  * Returns the empty CDD.
- * @return The empty CDD.
+ * @return the empty CDD.
  */
 inline cdd cdd_false() { return cdd(cddfalse); }
 
 /**
  * Existential quantification.
- * @todo
+ * @param r the cdd
+ * @param levels array of boolean node levels that have to be existentially quantified
+ * @param clocks array of clock numbers that have to be existentially quantified
+ * @param num_bools the number of boolean variables that have to be existentially quantified,
+ *      should match the size of \a levels
+ * @param num_clocks the number of clock variables that have to be existentially quantified,
+ *      should match the size of \a clocks
+ * @return a cdd where the boolean variables from \a levels and the clock variables from \a clocks
+ *      are existentially quantified.
  */
 inline cdd cdd_exist(const cdd& r, int32_t* levels, int32_t* clocks, int32_t num_bools, int32_t num_clocks)
 {

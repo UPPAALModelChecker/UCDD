@@ -82,7 +82,7 @@ void cdd2Dot(char* fname, ddNode* node, char* name);
 static int32_t cdd_contains_rec(ddNode*, raw_t*, int32_t dim);
 static ddNode* cdd_apply_rec(ddNode*, ddNode*);
 #ifdef EX
-static ddNode* cdd_exist_rec(ddNode* node, int32_t*, int32_t*, raw_t*);
+static ddNode* cdd_exist_rec(ddNode* node, int32_t*, int32_t*, int32_t, int32_t, raw_t*);
 #else
 static ddNode* cdd_exist_rec(ddNode*, int32_t*, ddNode*);
 #endif
@@ -431,7 +431,8 @@ int32_t cdd_edgecount(ddNode* node)
 /* Existentially quantify clocks in a CDD.
  */
 #ifdef EX
-ddNode* cdd_exist(ddNode* node, int32_t* levels, int32_t* clocks)
+ddNode* cdd_exist(ddNode* node, int32_t* levels_bool, int32_t* clocks, int32_t num_bool_resets,
+                  int32_t num_clock_resets)
 {
     int32_t i, j;
     raw_t removed_constraint[cdd_clocknum * cdd_clocknum];
@@ -441,7 +442,7 @@ ddNode* cdd_exist(ddNode* node, int32_t* levels, int32_t* clocks)
         }
     }
     opid++;
-    return cdd_exist_rec(node, levels, clocks, removed_constraint);
+    return cdd_exist_rec(node, levels_bool, clocks, num_bool_resets, num_clock_resets, removed_constraint);
 }
 #else
 ddNode* cdd_exist(ddNode* node, int32_t* levels)
@@ -774,7 +775,8 @@ static ddNode* relax(ddNode* node, int32_t* clocks, raw_t lower, int32_t clock1,
     return res;
 }
 
-static ddNode* cdd_exist_rec(ddNode* node, int32_t* levels, int32_t* clocks, raw_t* rc)
+static ddNode* cdd_exist_rec(ddNode* node, int32_t* levels_bool, int32_t* clocks, int32_t num_bool_resets,
+                             int32_t num_clock_resets, raw_t* rc)
 {
     LevelInfo* info;
     CddCacheData* entry;
@@ -804,7 +806,13 @@ static ddNode* cdd_exist_rec(ddNode* node, int32_t* levels, int32_t* clocks, raw
     case TYPE_CDD:
         res = cddfalse;
         cdd_it_init(it, node);
-        if (clocks[info->clock1] || clocks[info->clock2]) {
+        bool level_affected_by_reset = false;
+        for (int32_t i = 0; i < num_clock_resets; i++) {
+            level_affected_by_reset = clocks[i] == info->clock1 || clocks[i] == info->clock2;
+            if (level_affected_by_reset)
+                break;
+        }
+        if (level_affected_by_reset) {
             while (!cdd_it_atend(it)) {
                 // Here we add the constraint32_t to rc - we save the old
                 // constraints so they can be restored.
@@ -819,7 +827,7 @@ static ddNode* cdd_exist_rec(ddNode* node, int32_t* levels, int32_t* clocks, raw
 
                 cdd_ref(tmp1);
 
-                tmp2 = cdd_exist_rec(tmp1, levels, clocks, rc);
+                tmp2 = cdd_exist_rec(tmp1, levels_bool, clocks, num_bool_resets, num_clock_resets, rc);
                 cdd_ref(tmp2);
 
                 tmp3 = cdd_or(res, tmp2);
@@ -841,7 +849,7 @@ static ddNode* cdd_exist_rec(ddNode* node, int32_t* levels, int32_t* clocks, raw
                 tmp1 = cdd_interval_from_level(cdd_rglr(node)->level, cdd_it_lower(it), cdd_it_upper(it));
                 cdd_ref(tmp1);
 
-                tmp2 = cdd_exist_rec(cdd_it_child(it), levels, clocks, rc);
+                tmp2 = cdd_exist_rec(cdd_it_child(it), levels_bool, clocks, num_bool_resets, num_clock_resets, rc);
                 cdd_ref(tmp2);
 
                 tmp3 = cdd_and(tmp1, tmp2);
@@ -861,17 +869,25 @@ static ddNode* cdd_exist_rec(ddNode* node, int32_t* levels, int32_t* clocks, raw
         cdd_deref(res);
         break;
     case TYPE_BDD:
-        tmp1 = cdd_exist_rec(bdd_low(node), levels, clocks, rc);
+        tmp1 = cdd_exist_rec(bdd_low(node), levels_bool, clocks, num_bool_resets, num_clock_resets, rc);
         cdd_ref(tmp1);
 
-        tmp2 = cdd_exist_rec(bdd_high(node), levels, clocks, rc);
+        tmp2 = cdd_exist_rec(bdd_high(node), levels_bool, clocks, num_bool_resets, num_clock_resets, rc);
         cdd_ref(tmp2);
+        // check if the bool
+        level_affected_by_reset = false;
+        for (int32_t i = 0; i < num_bool_resets; i++) {
+            level_affected_by_reset = levels_bool[i] == bdd_node(node)->level;
+            if (level_affected_by_reset)
+                break;
+        }
 
-        if (levels[cdd_rglr(node)->level]) {
+        if (level_affected_by_reset) {  // TODO: check if the regularize here really was ment to be removed
+                                        // if (levels[cdd_rglr(node)->level]) {
             res = cdd_or(tmp1, tmp2);
             cdd_ref(res);
         } else {
-            tmp3 = cdd_bddvar(cdd_rglr(node)->level);
+            tmp3 = cdd_bddvar(cdd_rglr(node)->level);  // TODO: test if we can remove regularization
             cdd_ref(tmp3);
             res = cdd_ite(tmp3, tmp2, tmp1);
             cdd_ref(res);

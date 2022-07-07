@@ -543,7 +543,7 @@ extern int32_t cdd_edgecount(ddNode* dd);
 /**
  * Existential quantification. @todo
  */
-extern ddNode* cdd_exist(ddNode*, int32_t*, int32_t*);
+extern ddNode* cdd_exist(ddNode*, int32_t*, int32_t*, int32_t, int32_t);
 
 /**
  * Variable substitution. @todo
@@ -861,7 +861,7 @@ private:
     friend cdd cdd_bddvarpp(int);
     friend cdd cdd_bddnvarpp(int);
     friend cdd cdd_remove_negative(const cdd& node);
-    friend cdd cdd_exist(const cdd&, int32_t*, int32_t*);
+    friend cdd cdd_exist(const cdd&, int32_t*, int32_t*, int32_t, int32_t);
     friend cdd cdd_replace(const cdd&, int32_t*, int32_t*);
     friend int32_t cdd_nodecount(const cdd&);
     friend cdd cdd_apply(const cdd&, const cdd&, int);
@@ -1001,7 +1001,10 @@ inline cdd cdd_false() { return cdd(cddfalse); }
  * Existential quantification.
  * @todo
  */
-inline cdd cdd_exist(const cdd& r, int32_t* levels, int32_t* clocks) { return cdd(cdd_exist(r.root, levels, clocks)); }
+inline cdd cdd_exist(const cdd& r, int32_t* levels, int32_t* clocks, int32_t num_bools, int32_t num_clocks)
+{
+    return cdd(cdd_exist(r.root, levels, clocks, num_bools, num_clocks));
+}
 
 /**
  * Variable substitution.

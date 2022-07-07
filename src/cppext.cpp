@@ -142,6 +142,10 @@ cdd cdd_delay_invariant(const cdd& state, const cdd& invar)
  */
 cdd cdd_past(const cdd& state)
 {
+    if (cdd_isterminal(state.root))
+        return state;
+    if (cdd_info(state.root)->type == TYPE_BDD)
+        return state;
     uint32_t size = cdd_clocknum;
     cdd copy = state;
     cdd res = cdd_false();

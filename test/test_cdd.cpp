@@ -18,8 +18,8 @@
 #include "cdd/debug.h"
 #include "cdd/kernel.h"
 #include "base/Timer.h"
-#include "debug/macros.h"
 #include "base/random.h"
+#include "debug/macros.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
@@ -43,7 +43,7 @@ static int uniform(uint32_t a, uint32_t b)
 static bool random_bool()
 {
     RandomGenerator* rg = new RandomGenerator();
-    return rg->uni(0,1);
+    return rg->uni(0, 1);
 }
 
 #define RANGE() (uniform(1, 10000))

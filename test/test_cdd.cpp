@@ -24,6 +24,7 @@
 #include <doctest/doctest.h>
 
 #include <iostream>
+#include <random>
 #include <cstdio>
 #include <cstdlib>
 
@@ -32,10 +33,26 @@ using std::cerr;
 using std::cout;
 using base::Timer;
 
-/** Random range, may change definition */
-#define RANGE()      ((rand() % 10000) + 1)
-#define RANDOMINT(n) ((rand() % n))
-#define RANDOMBOOL() (rand() > (RAND_MAX / 2))
+/** Random helper functions. */
+static int uniform(int a, int b)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution dist(a, b);
+
+    return dist(gen);
+}
+
+static bool random_bool()
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::bernoulli_distribution dist(0.5);
+
+    return dist(gen);
+}
+
+#define RANGE() (uniform(1, 10000))
 
 /** Print the difference between two DBMs two stdout. */
 #define DIFF(D1, D2) dbm_printDiff(stdout, D1, D2, size)
@@ -373,9 +390,9 @@ void delay_test(size_t size)
     cdd bdd_part = cdd_true();
     for (uint32_t i = 0; i < size; i++) {
         cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
-        if (RANDOMBOOL())
+        if (random_bool())
             bdd_node = !bdd_node;
-        if (RANDOMBOOL()) {
+        if (random_bool()) {
             bdd_part &= bdd_node;
         } else {
             bdd_part |= bdd_node;
@@ -417,9 +434,9 @@ void delay_invariant_test(size_t size)
     cdd bdd_part = cdd_true();
     for (uint32_t i = 0; i < size; i++) {
         cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
-        if (RANDOMBOOL())
+        if (random_bool())
             bdd_node = !bdd_node;
-        if (RANDOMBOOL()) {
+        if (random_bool()) {
             bdd_part &= bdd_node;
         } else {
             bdd_part |= bdd_node;
@@ -458,9 +475,9 @@ void past_test(size_t size)
     cdd bdd_part = cdd_true();
     for (uint32_t i = 0; i < size; i++) {
         cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
-        if (RANDOMBOOL())
+        if (random_bool())
             bdd_node = !bdd_node;
-        if (RANDOMBOOL()) {
+        if (random_bool()) {
             bdd_part &= bdd_node;
         } else {
             bdd_part |= bdd_node;
@@ -493,9 +510,9 @@ void exist_test(size_t size)
     cdd bdd_part = cdd_true();
     for (uint32_t i = 0; i < size; i++) {
         cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
-        if (RANDOMBOOL())
+        if (random_bool())
             bdd_node = !bdd_node;
-        if (RANDOMBOOL()) {
+        if (random_bool()) {
             bdd_part &= bdd_node;
         } else {
             bdd_part |= bdd_node;
@@ -506,9 +523,9 @@ void exist_test(size_t size)
     // Select randomly a clock and a boolean variable
     const int num_bools = 1;
     const int num_clocks = 1;
-    int arr[num_clocks] = {(int)RANDOMINT(size)};
+    int arr[num_clocks] = {uniform(0, size - 1)};
     int* clockPtr = arr;
-    int arr1[num_bools] = {(int)RANDOMINT(size) + bdd_start_level};
+    int arr1[num_bools] = {uniform(0, size - 1) + bdd_start_level};
     int* boolPtr = arr1;
 
     // Perform the existential quantification for the chosen clock and boolean variables
@@ -549,7 +566,7 @@ static void test(const char* name, TestFunction f, size_t size)
     }
 }
 
-static void big_test(uint32_t n, uint32_t seed)
+static void big_test(uint32_t n)
 {
     cdd_init(100000, 10000, 10000);
     cdd_add_clocks(n);
@@ -611,12 +628,10 @@ TEST_CASE("CDD reduce with size 3")
 
 TEST_CASE("Big CDD test")
 {
-    uint32_t seed{};
-    srand(seed);
     dbm_wrap::resetCounters();
-    SUBCASE("Size 0") { big_test(0, seed); }
-    SUBCASE("Size 1") { big_test(1, seed); }
-    SUBCASE("Size 2") { big_test(2, seed); }
+    SUBCASE("Size 0") { big_test(0); }
+    SUBCASE("Size 1") { big_test(1); }
+    SUBCASE("Size 2") { big_test(2); }
     // TODO: the bellow cases pass only on 32-bit, need to fix it
 #if INTPTR_MAX == INT32_MAX
     SUBCASE("Size 3") { big_test(3, seed); }

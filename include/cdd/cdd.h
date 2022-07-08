@@ -872,10 +872,10 @@ private:
     friend cdd cdd_delay(const cdd&);
     friend cdd cdd_past(const cdd&);
     friend cdd cdd_delay_invariant(const cdd&, const cdd&);
-    friend cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_values, int32_t* bool_resets, int32_t* bool_values, int32_t bdd_start_level );
-    friend cdd cdd_transition(const cdd& state, const cdd& guard, int32_t* clock_resets, int32_t* clock_values, int32_t* bool_resets, int32_t* bool_values, int32_t bdd_start_level );
-    friend cdd cdd_transition_back(const cdd& state, const cdd& guard, const cdd& update, int32_t* clock_resets,  int32_t* bool_resets);
-    friend cdd cdd_transition_back_past(const cdd& state, const cdd& guard, const cdd& update, int32_t* clock_resets,  int32_t* bool_resets);
+    friend cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_values,  int32_t num_clock_resets, int32_t* bool_resets, int32_t* bool_values,  int32_t num_bool_resets );
+    friend cdd cdd_transition(const cdd& state, const cdd& guard, int32_t* clock_resets, int32_t* clock_values, int32_t num_clock_resets,int32_t* bool_resets, int32_t* bool_values, int32_t num_bool_resets);
+    friend cdd cdd_transition_back     (const cdd& state, const cdd& guard, const cdd& update, int32_t* clock_resets,  int32_t num_clock_resets, int32_t* bool_resets,  int32_t num_bool_resets);
+    friend cdd cdd_transition_back_past(const cdd& state, const cdd& guard, const cdd& update, int32_t* clock_resets,  int32_t num_clock_resets,  int32_t* bool_resets,  int32_t num_bool_resets);
     friend cdd cdd_reduce2(const cdd&);
     friend bool cdd_contains(const cdd&, raw_t* dbm, int32_t dim);
     friend cdd cdd_extract_dbm(const cdd&, raw_t* dbm, int32_t dim);

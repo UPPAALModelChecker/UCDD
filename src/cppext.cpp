@@ -191,16 +191,19 @@ cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_valu
     for (int i=0;i<num_bool_resets; i++)
     {
         if (bool_values[i]==1) {
-            copy = cdd_apply(copy, cdd_bddvarpp(bdd_start_level + bool_resets[i]), cddop_and);
+            copy = cdd_apply(copy, cdd_bddvarpp( bool_resets[i]), cddop_and);
         }
         else
         {
-            copy = cdd_apply(copy, cdd_bddnvarpp(bdd_start_level + bool_resets[i]), cddop_and);
+            copy = cdd_apply(copy, cdd_bddnvarpp(bool_resets[i]), cddop_and);
         }
     }
 
     cdd res= cdd_false();
     copy = cdd_remove_negative(copy);
+
+    if (cdd_info(copy.root)->type == TYPE_BDD)
+        return copy;
 
     while (!cdd_isterminal(copy.root) && cdd_info(copy.root)->type != TYPE_BDD) {
 
@@ -243,6 +246,9 @@ cdd cdd_transition(const cdd& state, const cdd& guard, int32_t* clock_resets, in
     cdd res= cdd_false();
     copy = cdd_remove_negative(copy);
 
+    if (cdd_info(copy.root)->type == TYPE_BDD)
+        return copy& guard;
+
     while (!cdd_isterminal(copy.root) && cdd_info(copy.root)->type != TYPE_BDD) {
 
         copy = cdd_reduce(copy);
@@ -260,6 +266,7 @@ cdd cdd_transition(const cdd& state, const cdd& guard, int32_t* clock_resets, in
 
 cdd cdd_transition_back(const cdd&  state, const cdd& guard, const cdd& update, int32_t* clock_resets,  int32_t num_clock_resets, int32_t* bool_resets,  int32_t num_bool_resets)
 {
+
     uint32_t size = cdd_clocknum;
     cdd copy= state;
     // TODO: sanity check: implement cdd_is_update();
@@ -268,13 +275,18 @@ cdd cdd_transition_back(const cdd&  state, const cdd& guard, const cdd& update, 
     if (copy == cdd_false()) {
         return copy;
     }
+
     int empty[0];
     int* emptyPtr = empty;
     copy = cdd_exist(copy, bool_resets, emptyPtr, num_bool_resets,0);
 
+    if (num_clock_resets==0)
+            return copy & guard;
+    if (!cdd_isterminal(copy.root) && cdd_info(copy.root)->type == TYPE_BDD)
+        return copy & guard;
+
     cdd res= cdd_false();
     copy = cdd_remove_negative(copy);
-
     while (!cdd_isterminal(copy.root) && cdd_info(copy.root)->type != TYPE_BDD) {
 
         copy = cdd_reduce(copy);

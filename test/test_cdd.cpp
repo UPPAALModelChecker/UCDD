@@ -110,6 +110,23 @@ std::ostream& operator<<(std::ostream& os, const dbm_wrap& d)
     return os << "}";
 }
 
+/** Generate a random cdd with only BDD nodes. */
+static cdd generate_bdd(size_t size)
+{
+    cdd bdd_part = cdd_true();
+    for (uint32_t i = 0; i < size; i++) {
+        cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
+        if (random_bool())
+            bdd_node = !bdd_node;
+        if (random_bool()) {
+            bdd_part &= bdd_node;
+        } else {
+            bdd_part |= bdd_node;
+        }
+    }
+    return bdd_part;
+}
+
 /** test conversion between CDD and DBMs */
 static void test_conversion(size_t size)
 {
@@ -382,18 +399,7 @@ void delay_test(size_t size)
     REQUIRE(cdd_equiv(cdd_delay(result1), result2));
 
     // Create a random BDD.
-    cdd bdd_part = cdd_true();
-    for (uint32_t i = 0; i < size; i++) {
-        cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
-        if (random_bool())
-            bdd_node = !bdd_node;
-        if (random_bool()) {
-            bdd_part &= bdd_node;
-        } else {
-            bdd_part |= bdd_node;
-        }
-    }
-
+    cdd bdd_part = generate_bdd(size);
     cdd result3 = result1 & bdd_part;
 
     // The delay operator should not influence the BDD part.
@@ -426,18 +432,7 @@ void delay_invariant_test(size_t size)
     REQUIRE(cdd_equiv(cdd_delay_invariant(result1, cdd_true()), cdd_delay(result1)));
 
     // Create a random BDD.
-    cdd bdd_part = cdd_true();
-    for (uint32_t i = 0; i < size; i++) {
-        cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
-        if (random_bool())
-            bdd_node = !bdd_node;
-        if (random_bool()) {
-            bdd_part &= bdd_node;
-        } else {
-            bdd_part |= bdd_node;
-        }
-    }
-
+    cdd bdd_part = generate_bdd(size);
     cdd result3 = result1 & bdd_part;
 
     // The delay operator should not influence the BDD part.
@@ -467,18 +462,7 @@ void past_test(size_t size)
     REQUIRE(cdd_equiv(cdd_past(result1), result2));
 
     // Create a random BDD.
-    cdd bdd_part = cdd_true();
-    for (uint32_t i = 0; i < size; i++) {
-        cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
-        if (random_bool())
-            bdd_node = !bdd_node;
-        if (random_bool()) {
-            bdd_part &= bdd_node;
-        } else {
-            bdd_part |= bdd_node;
-        }
-    }
-
+    cdd bdd_part = generate_bdd(size);
     cdd result3 = result1 & bdd_part;
 
     // The delay operator should not influence the BDD part.
@@ -502,17 +486,7 @@ void exist_test(size_t size)
     }
 
     // Create a random BDD.
-    cdd bdd_part = cdd_true();
-    for (uint32_t i = 0; i < size; i++) {
-        cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
-        if (random_bool())
-            bdd_node = !bdd_node;
-        if (random_bool()) {
-            bdd_part &= bdd_node;
-        } else {
-            bdd_part |= bdd_node;
-        }
-    }
+    cdd bdd_part = generate_bdd(size);
     cdd result = cdd_part & bdd_part;
 
     // Select randomly a clock and a boolean variable
@@ -569,17 +543,7 @@ void apply_reset_test(size_t size)
     }
 
     // Create a random BDD.
-    cdd bdd_part = cdd_true();
-    for (uint32_t i = 0; i < size; i++) {
-        cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
-        if (random_bool())
-            bdd_node = !bdd_node;
-        if (random_bool()) {
-            bdd_part &= bdd_node;
-        } else {
-            bdd_part |= bdd_node;
-        }
-    }
+    cdd bdd_part = generate_bdd(size);
     cdd cdd1 = cdd_part & bdd_part;
 
     // Resetting nothing should not change the CDDs.
@@ -613,6 +577,67 @@ void apply_reset_test(size_t size)
     // Check the result.
     REQUIRE(cdd_equiv(result1, result1 & update));
     REQUIRE(cdd_equiv(cdd_false(), result1 & !update));
+}
+
+void apply_transition_test(size_t size)
+{
+    // First some trivial cases.
+    REQUIRE(cdd_equiv(cdd_transition(cdd_true(), cdd_true(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd_true())));
+    REQUIRE(cdd_equiv(cdd_transition(cdd_true(), cdd_false(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd_false())));
+    REQUIRE(cdd_equiv(cdd_transition(cdd_false(), cdd_true(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd_false())));
+
+    // Create a CDD containing random DBMs.
+    cdd cdd_part;
+    auto dbm = dbm_wrap{size};
+    int n_dbms = 8;
+
+    for (uint32_t i = 0; i < n_dbms; i++) {
+        dbm.generate();
+        cdd_part |= cdd(dbm.raw(), dbm.size());
+    }
+
+    // Create a random BDD.
+    cdd bdd_part = generate_bdd(size);
+    cdd cdd1 = cdd_part & bdd_part;
+
+    // Taking a transition with true guard and no update should not alter the state.
+    REQUIRE(cdd_equiv(cdd_transition(cdd_part, cdd_true(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd_part)));
+    REQUIRE(cdd_equiv(cdd_transition(bdd_part, cdd_true(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(bdd_part)));
+    REQUIRE(cdd_equiv(cdd_transition(cdd1, cdd_true(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd1)));
+
+    // The rest of the test only applies when there are 2 or more clocks.
+    if (size <= 1) return;
+
+    cdd guard = generate_bdd(size);
+
+    // Select randomly a clock and a boolean variable to be reset.
+    const int num_bools = 1;
+    const int num_clocks = 1;
+    int clock_num = (uniform(1, size - 1)); // So we don't select the zero clock
+    int arr[num_clocks] = {clock_num};
+    int* clockPtr = arr;
+    int arr1[num_clocks] = {0}; // Always reset to 0 in this test case.
+    int* clock_values = arr1;
+    int arr2[num_bools] = {uniform(0, size - 1) + bdd_start_level};
+    int* boolPtr = arr2;
+    int arr3[num_bools] = {0}; // Always reset to false in this test case.
+    int* bool_values = arr3;
+
+    // Take the transition.
+    cdd result1 = cdd_transition(cdd1, guard, clockPtr, clock_values, num_clocks, boolPtr,  bool_values, num_bools);
+    result1 = cdd_reduce(result1);
+
+    // Create a CDD containing just the updated values.
+    cdd update = cdd_intervalpp(clockPtr[0],0,0,1) & cdd_bddnvarpp(boolPtr[0]);
+
+    // Check the result.
+    REQUIRE(cdd_equiv(result1, result1 & update));
+    REQUIRE(cdd_equiv(cdd_false(), result1 & !update));
+
+    // Performing transition manually.
+    cdd after_guard = cdd1 & guard;
+    cdd result2 = cdd_apply_reset(after_guard, clockPtr, clock_values, num_clocks, boolPtr,  bool_values, num_bools);
+    REQUIRE(cdd_equiv(result1, result2));
 }
 
 static void test(const char* name, TestFunction f, size_t size)
@@ -649,6 +674,7 @@ static void big_test(uint32_t n)
             test("past_test        ", past_test, i);
             test("exist_test       ", exist_test, i);
             test("apply_reset_test ", apply_reset_test, i);
+            test("apply_transition_test", apply_transition_test, i);
         }
         test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;

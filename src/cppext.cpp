@@ -259,26 +259,28 @@ cdd cdd_transition(const cdd& state, const cdd& guard, int32_t* clock_resets, in
     copy &= guard;
     int empty[0];
     int* emptyPtr = empty;
-    copy = cdd_exist(copy, bool_resets, emptyPtr, num_bool_resets,0);
+    if (num_bool_resets > 0) copy = cdd_exist(copy, bool_resets, emptyPtr, num_bool_resets,0);
     // Hint: if this quantifies a clock, the resulting CDD will include negative clock values
 
     // apply bool updates
     for (int i=0;i<num_bool_resets; i++)
     {
         if (bool_values[i]==1) {
-            copy = cdd_apply(copy, cdd_bddvarpp(bdd_start_level + bool_resets[i]), cddop_and);
+            copy = cdd_apply(copy, cdd_bddvarpp(bool_resets[i]), cddop_and);
         }
         else
         {
-            copy = cdd_apply(copy, cdd_bddnvarpp(bdd_start_level + bool_resets[i]), cddop_and);
+            copy = cdd_apply(copy, cdd_bddnvarpp(bool_resets[i]), cddop_and);
         }
     }
 
     cdd res= cdd_false();
     copy = cdd_remove_negative(copy);
 
+    if (num_clock_resets == 0)
+        return copy;
     if (cdd_info(copy.root)->type == TYPE_BDD)
-        return copy& guard;
+        return copy;
 
     while (!cdd_isterminal(copy.root) && cdd_info(copy.root)->type != TYPE_BDD) {
 

@@ -24,6 +24,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
+#include <random>
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
@@ -551,6 +552,69 @@ void exist_test(size_t size)
     REQUIRE(cdd_equiv(result4, result6));
 }
 
+void apply_reset_test(size_t size)
+{
+    // First some trivial cases.
+    REQUIRE(cdd_equiv(cdd_apply_reset(cdd_true(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd_true())));
+    REQUIRE(cdd_equiv(cdd_apply_reset(cdd_false(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd_false())));
+
+    // Create a CDD containing random DBMs.
+    cdd cdd_part;
+    auto dbm = dbm_wrap{size};
+    int n_dbms = 8;
+
+    for (uint32_t i = 0; i < n_dbms; i++) {
+        dbm.generate();
+        cdd_part |= cdd(dbm.raw(), dbm.size());
+    }
+
+    // Create a random BDD.
+    cdd bdd_part = cdd_true();
+    for (uint32_t i = 0; i < size; i++) {
+        cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
+        if (random_bool())
+            bdd_node = !bdd_node;
+        if (random_bool()) {
+            bdd_part &= bdd_node;
+        } else {
+            bdd_part |= bdd_node;
+        }
+    }
+    cdd cdd1 = cdd_part & bdd_part;
+
+    // Resetting nothing should not change the CDDs.
+    REQUIRE(cdd_equiv(cdd_apply_reset(cdd_part,NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd_part)));
+    REQUIRE(cdd_equiv(cdd_apply_reset(bdd_part,NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(bdd_part)));
+    REQUIRE(cdd_equiv(cdd_apply_reset(cdd1,NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd1)));
+
+    // The rest of the test only applies when there are 2 or more clocks.
+    if (size <= 1) return;
+
+    // Select randomly a clock and a boolean variable to be reset.
+    const int num_bools = 1;
+    const int num_clocks = 1;
+    int clock_num = (uniform(1, size - 1)); // So we don't select the zero clock
+    int arr[num_clocks] = {clock_num};
+    int* clockPtr = arr;
+    int arr1[num_clocks] = {0}; // Always reset to 0 in this test case.
+    int* clock_values = arr1;
+    int arr2[num_bools] = {uniform(0, size - 1) + bdd_start_level};
+    int* boolPtr = arr2;
+    int arr3[num_bools] = {0}; // Always reset to false in this test case.
+    int* bool_values = arr3;
+
+    // Perform the reset to the 0 value.
+    cdd result1 = cdd_apply_reset(cdd1, clockPtr, clock_values, num_clocks, boolPtr,  bool_values, num_bools);
+    result1 = cdd_reduce(result1);
+
+    // Create a CDD containing just the updated values.
+    cdd update = cdd_intervalpp(clockPtr[0],0,0,1) & cdd_bddnvarpp(boolPtr[0]);
+
+    // Check the result.
+    REQUIRE(cdd_equiv(result1, result1 & update));
+    REQUIRE(cdd_equiv(cdd_false(), result1 & !update));
+}
+
 static void test(const char* name, TestFunction f, size_t size)
 {
     cout << name << " size = " << size << endl;
@@ -584,6 +648,7 @@ static void big_test(uint32_t n)
             test("delay_invariant_test", delay_invariant_test, i);
             test("past_test        ", past_test, i);
             test("exist_test       ", exist_test, i);
+            test("apply_reset_test ", apply_reset_test, i);
         }
         test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;
@@ -607,6 +672,7 @@ TEST_CASE("CDD intersection with size 3")
 {
     cdd_init(100000, 10000, 10000);
     cdd_add_clocks(3);
+    cdd_add_bddvar(3);
     test_intersection(3);
 }
 
@@ -616,6 +682,7 @@ TEST_CASE("CDD reduce with size 3")
 {
     cdd_init(100000, 10000, 10000);
     cdd_add_clocks(3);
+    cdd_add_bddvar(3);
     test_reduce(3);
 }
 #endif /* 32-bit */

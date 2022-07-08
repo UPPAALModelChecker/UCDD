@@ -19,12 +19,12 @@
 #include "cdd/kernel.h"
 #include "base/Timer.h"
 #include "debug/macros.h"
+#include "base/random.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
 #include <iostream>
-#include <random>
 #include <cstdio>
 #include <cstdlib>
 
@@ -34,22 +34,16 @@ using std::cout;
 using base::Timer;
 
 /** Random helper functions. */
-static int uniform(int a, int b)
+static int uniform(uint32_t a, uint32_t b)
 {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution dist(a, b);
-
-    return dist(gen);
+    RandomGenerator* rg = new RandomGenerator();
+    return rg->uni(a, b);
 }
 
 static bool random_bool()
 {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::bernoulli_distribution dist(0.5);
-
-    return dist(gen);
+    RandomGenerator* rg = new RandomGenerator();
+    return rg->uni(0,1);
 }
 
 #define RANGE() (uniform(1, 10000))
@@ -628,6 +622,9 @@ TEST_CASE("CDD reduce with size 3")
 
 TEST_CASE("Big CDD test")
 {
+    RandomGenerator* rg = new RandomGenerator();
+    uint32_t seed{};
+    rg->set_seed(seed);
     dbm_wrap::resetCounters();
     SUBCASE("Size 0") { big_test(0); }
     SUBCASE("Size 1") { big_test(1); }

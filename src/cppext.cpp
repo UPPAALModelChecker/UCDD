@@ -162,6 +162,20 @@ cdd cdd_past(const cdd& state)
     return res;
 }
 
+/**
+ * Apply clock and boolean variable resets.
+ *
+ * @param state cdd to be reset
+ * @param clock_resets array of clock numbers that have to be reset
+ * @param clock_values array of clock reset values, should match the size of \a clocks_resets
+ * @param num_clock_resets the number of clock variables that have to be reset,
+*      should match the size of \a clocks_resets
+ * @param bool_resets array of boolean node levels that have to be reset
+ * @param bool_values array of boolean reset values, should match the size of \a bool_resets
+ * @param num_bool_resets the number of boolean variables that have to be reset,
+*      should match the size of \a bool_resets
+ * @return cdd where the supplied reset has been applied
+ */
 cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_values, int32_t num_clock_resets, int32_t* bool_resets, int32_t* bool_values, int32_t num_bool_resets)
 {
     uint32_t size = cdd_clocknum;
@@ -220,6 +234,21 @@ cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_valu
     return res;
 }
 
+/**
+ * Perform the execution of a transition.
+ *
+ * @param state cdd of the transition's source state
+ * @param guard cdd of the guard
+ * @param clock_resets array of clock numbers that have to be reset
+ * @param clock_values array of clock reset values, should match the size of \a clocks_resets
+ * @param num_clock_resets the number of clock variables that have to be reset,
+*      should match the size of \a clocks_resets
+ * @param bool_resets array of boolean node levels that have to be reset
+ * @param bool_values array of boolean reset values, should match the size of \a bool_resets
+ * @param num_bool_resets the number of boolean variables that have to be reset,
+*      should match the size of \a bool_resets
+ * @return cdd of the target state after taking the transition
+ */
 cdd cdd_transition(const cdd& state, const cdd& guard, int32_t* clock_resets, int32_t* clock_values, int32_t num_clock_resets, int32_t* bool_resets, int32_t* bool_values,   int32_t num_bool_resets )
 {
     uint32_t size = cdd_clocknum;
@@ -264,6 +293,23 @@ cdd cdd_transition(const cdd& state, const cdd& guard, int32_t* clock_resets, in
 
 }
 
+/**
+ * Perform the execution of a transition backwards.
+ *
+ * TODO write something about the update cdd
+ * <p></p>
+ *
+ * @param state cdd of the transition's target state
+ * @param guard cdd of the guard
+ * @param update cdd of the update
+ * @param clock_resets array of clock numbers that have to be reset
+ * @param num_clock_resets the number of clock variables that have to be reset,
+*      should match the size of \a clocks_resets
+ * @param bool_resets array of boolean node levels that have to be reset
+ * @param num_bool_resets the number of boolean variables that have to be reset,
+*      should match the size of \a bool_resets
+ * @return cdd of the immediate source state after taking the transition backwards
+ */
 cdd cdd_transition_back(const cdd&  state, const cdd& guard, const cdd& update, int32_t* clock_resets,  int32_t num_clock_resets, int32_t* bool_resets,  int32_t num_bool_resets)
 {
 
@@ -301,6 +347,26 @@ cdd cdd_transition_back(const cdd&  state, const cdd& guard, const cdd& update, 
     return res & guard;
 }
 
+/**
+ * Perform the execution of a transition backwards and delay in the past. Thus the
+ * resulting cdd represents the state that can either take the transition immediately
+ * or delay first before taking the transition and then end up in the supplied target
+ * state.
+ *
+ * TODO write something about the update cdd
+ * <p></p>
+ *
+ * @param state cdd of the transition's target state
+ * @param guard cdd of the guard
+ * @param update cdd of the update
+ * @param clock_resets array of clock numbers that have to be reset
+ * @param num_clock_resets the number of clock variables that have to be reset,
+*      should match the size of \a clocks_resets
+ * @param bool_resets array of boolean node levels that have to be reset
+ * @param num_bool_resets the number of boolean variables that have to be reset,
+*      should match the size of \a bool_resets
+ * @return cdd of the target state after taking the transition
+ */
 cdd cdd_transition_back_past(const cdd&  state, const cdd& guard, const cdd& update, int32_t* clock_resets, int32_t num_clock_resets, int32_t* bool_resets, int32_t num_bool_resets)
 {
     cdd result = cdd_transition_back(state,guard, update, clock_resets, num_clock_resets, bool_resets, num_bool_resets);

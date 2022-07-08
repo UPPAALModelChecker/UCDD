@@ -191,10 +191,8 @@ cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_valu
         copy = cdd_reduce(copy);
         cdd bottom = cdd_extract_bdd(copy, size);
         copy = cdd_extract_dbm(copy, dbm, size);
-        for (int i = 0; i < cdd_clocknum; i++) {
-            if (clock_resets[i] == 1) {
-                dbm_updateValue(dbm, size, i , clock_values[i]);
-            }
+        for (int i = 0; i < num_clock_resets; i++) {
+                dbm_updateValue(dbm, size, clock_resets[i] , clock_values[i]);
         }
         res |= (cdd(dbm,size) & bottom);
     }
@@ -230,8 +228,8 @@ cdd cdd_transition(const cdd& state, const cdd& guard, int32_t* clock_resets, in
         cdd bottom = cdd_extract_bdd(copy, size);
         copy = cdd_extract_dbm(copy, dbm, size);
         for (int i = 0; i < cdd_clocknum; i++) {
-            if (clock_resets[i] == 1) {
-                dbm_updateValue(dbm, size, i , clock_values[i]);
+            for (int i = 0; i < num_clock_resets; i++) {
+                dbm_updateValue(dbm, size, clock_resets[i] , clock_values[i]);
             }
         }
         res |= (cdd(dbm,size) & bottom);

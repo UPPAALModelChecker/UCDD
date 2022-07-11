@@ -579,7 +579,7 @@ void apply_reset_test(size_t size)
     REQUIRE(cdd_equiv(cdd_false(), result1 & !update));
 }
 
-void apply_transition_test(size_t size)
+void transition_test(size_t size)
 {
     // First some trivial cases.
     REQUIRE(cdd_equiv(cdd_transition(cdd_true(), cdd_true(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd_true())));
@@ -640,6 +640,123 @@ void apply_transition_test(size_t size)
     REQUIRE(cdd_equiv(result1, result2));
 }
 
+void transition_back_test(size_t size)
+{
+    // First some trivial cases.
+    REQUIRE(cdd_equiv(cdd_transition_back(cdd_true(), cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_true()));
+    REQUIRE(cdd_equiv(cdd_transition_back(cdd_true(), cdd_false(), cdd_true(), NULL, 0, NULL, 0), cdd_false()));
+    REQUIRE(cdd_equiv(cdd_transition_back(cdd_false(), cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_false()));
+
+    // Create a CDD containing random DBMs.
+    cdd cdd_part;
+    auto dbm = dbm_wrap{size};
+    int n_dbms = 8;
+
+    for (uint32_t i = 0; i < n_dbms; i++) {
+        dbm.generate();
+        cdd_part |= cdd(dbm.raw(), dbm.size());
+    }
+
+    // Create a random BDD.
+    cdd bdd_part = generate_bdd(size);
+    cdd cdd1 = cdd_part & bdd_part;
+
+    // Taking a transition with true guard and no update should not alter the state.
+    REQUIRE(cdd_equiv(cdd_transition_back(cdd_part, cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_part));
+    REQUIRE(cdd_equiv(cdd_transition_back(bdd_part, cdd_true(), cdd_true(), NULL, 0, NULL, 0), bdd_part));
+    REQUIRE(cdd_equiv(cdd_transition_back(cdd1, cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd1));
+
+    // The rest of the test only applies when there are 2 or more clocks.
+    if (size <= 1) return;
+
+    cdd guard = generate_bdd(size);
+
+    // Select randomly a clock and a boolean variable to be reset.
+    const int num_bools = 1;
+    const int num_clocks = 1;
+    int clock_num = (uniform(1, size - 1)); // So we don't select the zero clock
+    int arr[num_clocks] = {clock_num};
+    int* clockPtr = arr;
+    int arr1[num_clocks] = {0}; // Always reset to 0 in this test case.
+    int* clock_values = arr1;
+    int arr2[num_bools] = {uniform(0, size - 1) + bdd_start_level};
+    int* boolPtr = arr2;
+    int arr3[num_bools] = {0}; // Always reset to false in this test case.
+    int* bool_values = arr3;
+    cdd update = cdd_intervalpp(clockPtr[0],0,0,1) & cdd_bddnvarpp(boolPtr[0]);
+
+    // Take the transition.
+    cdd result1 = cdd_transition_back(cdd1, guard, update, clockPtr, num_clocks, boolPtr, num_bools);
+    result1 = cdd_reduce(result1);
+
+    // Check the result.
+    REQUIRE(cdd_equiv(result1, result1 & guard));
+    REQUIRE(cdd_equiv(cdd_false(), result1 & !guard));
+
+    // Transitioning forward again should be included in the original start CDD.
+    // Remember that cdd1 \subset cdd2 <==> cdd1 & !cdd2 == false
+    REQUIRE((!cdd1 & cdd_transition(result1, guard, clockPtr, clock_values, num_clocks, boolPtr,  bool_values, num_bools)) == cdd_false());
+}
+
+void transition_back_past_test(size_t size)
+{
+    // First some trivial cases.
+    REQUIRE(cdd_equiv(cdd_transition_back_past(cdd_true(), cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_true()));
+    REQUIRE(cdd_equiv(cdd_transition_back_past(cdd_true(), cdd_false(), cdd_true(), NULL, 0, NULL, 0), cdd_false()));
+    REQUIRE(cdd_equiv(cdd_transition_back_past(cdd_false(), cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_false()));
+
+    // Create a CDD containing random DBMs.
+    cdd cdd_part;
+    auto dbm = dbm_wrap{size};
+    int n_dbms = 8;
+
+    for (uint32_t i = 0; i < n_dbms; i++) {
+        dbm.generate();
+        cdd_part |= cdd(dbm.raw(), dbm.size());
+    }
+
+    // Create a random BDD.
+    cdd bdd_part = generate_bdd(size);
+    cdd cdd1 = cdd_part & bdd_part;
+
+    // Taking a transition with true guard and no update should not alter the state. So only the past delay operator is applied.
+    REQUIRE(cdd_equiv(cdd_transition_back_past(cdd_part, cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_past(cdd_part)));
+    REQUIRE(cdd_equiv(cdd_transition_back_past(bdd_part, cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_past(bdd_part)));
+    REQUIRE(cdd_equiv(cdd_transition_back_past(cdd1, cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_past(cdd1)));
+
+    // The rest of the test only applies when there are 2 or more clocks.
+    if (size <= 1) return;
+
+    cdd guard = generate_bdd(size);
+
+    // Select randomly a clock and a boolean variable to be reset.
+    const int num_bools = 1;
+    const int num_clocks = 1;
+    int clock_num = (uniform(1, size - 1)); // So we don't select the zero clock
+    int arr[num_clocks] = {clock_num};
+    int* clockPtr = arr;
+    int arr1[num_clocks] = {0}; // Always reset to 0 in this test case.
+    int* clock_values = arr1;
+    int arr2[num_bools] = {uniform(0, size - 1) + bdd_start_level};
+    int* boolPtr = arr2;
+    int arr3[num_bools] = {0}; // Always reset to false in this test case.
+    int* bool_values = arr3;
+    cdd update = cdd_intervalpp(clockPtr[0],0,0,1) & cdd_bddnvarpp(boolPtr[0]);
+
+    // Take the transition.
+    cdd result1 = cdd_transition_back_past(cdd1, guard, update, clockPtr, num_clocks, boolPtr, num_bools);
+    result1 = cdd_reduce(result1);
+
+    // Check the result.
+    REQUIRE(cdd_equiv(result1, result1 & guard));
+    REQUIRE(cdd_equiv(cdd_false(), result1 & !guard));
+    REQUIRE(cdd_equiv(result1, cdd_past(cdd_transition_back(cdd1, guard, update, clockPtr, num_clocks, boolPtr, num_bools))));
+
+    // Transitioning forward again should be included in the original start CDD.
+    // Remember that cdd1 \subset cdd2 <==> cdd1 & !cdd2 == false
+    REQUIRE((!cdd1 & cdd_transition(result1, guard, clockPtr, clock_values, num_clocks, boolPtr,  bool_values, num_bools)) == cdd_false());
+}
+
 static void test(const char* name, TestFunction f, size_t size)
 {
     cout << name << " size = " << size << endl;
@@ -674,7 +791,9 @@ static void big_test(uint32_t n)
             test("past_test        ", past_test, i);
             test("exist_test       ", exist_test, i);
             test("apply_reset_test ", apply_reset_test, i);
-            test("apply_transition_test", apply_transition_test, i);
+            test("transition_test  ", transition_test, i);
+            test("transition_back_test", transition_back_test, i);
+            test("transition_back_past_test", transition_back_past_test, i);
         }
         test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;

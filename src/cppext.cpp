@@ -11,8 +11,6 @@
 
 #include "cdd/kernel.h"
 
-#include <malloc.h>
-
 #define ADBM(NAME) raw_t* NAME = allocDBM(size)
 
 /* Allocate a DBM. */

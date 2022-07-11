@@ -872,10 +872,15 @@ private:
     friend cdd cdd_delay(const cdd&);
     friend cdd cdd_past(const cdd&);
     friend cdd cdd_delay_invariant(const cdd&, const cdd&);
-    friend cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_values,  int32_t num_clock_resets, int32_t* bool_resets, int32_t* bool_values,  int32_t num_bool_resets );
-    friend cdd cdd_transition(const cdd& state, const cdd& guard, int32_t* clock_resets, int32_t* clock_values, int32_t num_clock_resets,int32_t* bool_resets, int32_t* bool_values, int32_t num_bool_resets);
-    friend cdd cdd_transition_back     (const cdd& state, const cdd& guard, const cdd& update, int32_t* clock_resets,  int32_t num_clock_resets, int32_t* bool_resets,  int32_t num_bool_resets);
-    friend cdd cdd_transition_back_past(const cdd& state, const cdd& guard, const cdd& update, int32_t* clock_resets,  int32_t num_clock_resets,  int32_t* bool_resets,  int32_t num_bool_resets);
+    friend cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_values, int32_t num_clock_resets,
+                               int32_t* bool_resets, int32_t* bool_values, int32_t num_bool_resets);
+    friend cdd cdd_transition(const cdd& state, const cdd& guard, int32_t* clock_resets, int32_t* clock_values,
+                              int32_t num_clock_resets, int32_t* bool_resets, int32_t* bool_values,
+                              int32_t num_bool_resets);
+    friend cdd cdd_transition_back(const cdd& state, const cdd& guard, const cdd& update, int32_t* clock_resets,
+                                   int32_t num_clock_resets, int32_t* bool_resets, int32_t num_bool_resets);
+    friend cdd cdd_transition_back_past(const cdd& state, const cdd& guard, const cdd& update, int32_t* clock_resets,
+                                        int32_t num_clock_resets, int32_t* bool_resets, int32_t num_bool_resets);
     friend cdd cdd_reduce2(const cdd&);
     friend bool cdd_contains(const cdd&, raw_t* dbm, int32_t dim);
     friend cdd cdd_extract_dbm(const cdd&, raw_t* dbm, int32_t dim);
@@ -946,7 +951,6 @@ inline cdd cdd_upperpp(int32_t i, int32_t j, raw_t bound) { return cdd(cdd_upper
  * @see cdd_intervalpp
  */
 inline cdd cdd_lowerpp(int32_t i, int32_t j, raw_t bound) { return cdd(cdd_neg(cdd_upper(i, j, bound))); }
-
 
 /**
  * Interprate the CDD as clock values, and remove any negative
@@ -1083,8 +1087,6 @@ inline cdd cdd_reduce2(const cdd& r) { return cdd(cdd_reduce2(r.root)); }
  * @return the difference between \a cdd and \a dbm
  */
 inline cdd cdd_extract_dbm(const cdd& r, raw_t* dbm, int32_t dim) { return cdd(cdd_extract_dbm(r.root, dbm, dim)); }
-
-
 
 /**
  * Extract the bottom BDD of the first DBM in a given CDD.

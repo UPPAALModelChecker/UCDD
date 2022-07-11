@@ -37,7 +37,6 @@ extern "C" {
 #define bnd_u2l(b)               ((b) == INF ? -INF : ((-((b) & ~(0x1))) | ((b)&0x1)) ^ 0x1)
 #define bnd_flip_strict(b)       ((b) == ((-((b) & ~(0x1))) | ((b)&0x1)) ^ 0x1)
 
-
 ///////////////////////////////////////////////////////////////////////////
 /// @defgroup kernel Internal interfaces
 ///

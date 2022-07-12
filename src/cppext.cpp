@@ -114,6 +114,36 @@ cdd cdd_delay(const cdd& state)
     return res;
 }
 
+cdd cdd_predt(const cdd&  target, const cdd&  safe)
+{
+    cdd allThatKillsUs = cdd_false();
+    uint32_t size = cdd_clocknum;
+    cdd copy = target;
+    ADBM(dbm);
+    while (!cdd_isterminal(copy.handle()) && cdd_info(copy.handle())->type != TYPE_BDD) {
+        extraction_result res = cdd_extract_bdd_and_dbm(copy);
+        copy = cdd_reduce(cdd_remove_negative(res.CDD_part));
+        dbm = res.dbm;
+        cdd bdd = res.BDD_part;
+        cdd bdd_intersect = bdd & safe;
+        if ( bdd_intersect != cdd_false())
+        {
+            dbm_down(dbm, size);
+            cdd past = cdd(dbm,size);
+            past &= bdd;
+            cdd escape = safe & past;
+            allThatKillsUs |= (past - escape);
+        }
+        else
+        {
+            dbm_down(dbm,size);
+            cdd past = cdd (dbm, size) & bdd;
+            allThatKillsUs |= past;
+        }
+    }
+    return allThatKillsUs;
+}
+
 /**
  * Perform the delay operation on a CDD taking an invariant into account.
  *

@@ -196,6 +196,8 @@ cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_valu
     // Special cases when we are already done.
     if (num_clock_resets == 0)
         return copy;
+    if (cdd_isterminal(copy.root))
+        return copy;
     if (cdd_info(copy.root)->type == TYPE_BDD)
         return copy;
 

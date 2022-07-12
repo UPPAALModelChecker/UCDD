@@ -834,6 +834,7 @@ TEST_CASE("CDD intersection with size 3")
     cdd_add_clocks(3);
     cdd_add_bddvar(3);
     test_intersection(3);
+    cdd_done();
 }
 
 // TODO: the bellow test case passes only on 32-bit, need to fix it

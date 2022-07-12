@@ -10,6 +10,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "cdd/kernel.h"
+#include "dbm/fed.h"
 
 #define ADBM(NAME) raw_t* NAME = allocDBM(size)
 
@@ -114,30 +115,60 @@ cdd cdd_delay(const cdd& state)
     return res;
 }
 
+cdd cdd_from_fed(dbm::fed_t& fed)
+{
+    uint32_t size = cdd_clocknum;
+    cdd res= cdd_false();
+    while (fed.size()>0)
+    {
+        dbm::dbm_t current = fed.const_dbmt();
+        res |= cdd(current.dbm(),size);
+        fed.removeThisDBM(current);
+    }
+    return res;
+}
+
 cdd cdd_predt(const cdd&  target, const cdd&  safe)
 {
     cdd allThatKillsUs = cdd_false();
     uint32_t size = cdd_clocknum;
     cdd copy = target;
-    ADBM(dbm);
+    ADBM(dbm_target);
+    // split target into DBMs
     while (!cdd_isterminal(copy.handle()) && cdd_info(copy.handle())->type != TYPE_BDD) {
         extraction_result res = cdd_extract_bdd_and_dbm(copy);
         copy = cdd_reduce(cdd_remove_negative(res.CDD_part));
-        dbm = res.dbm;
-        cdd bdd = res.BDD_part;
-        cdd bdd_intersect = bdd & safe;
-        if ( bdd_intersect != cdd_false())
+        dbm_target = res.dbm;
+        cdd bdd_target = res.BDD_part;
+        cdd good_part_with_fitting_bools = bdd_target & safe;
+        if (good_part_with_fitting_bools != cdd_false())
         {
-            dbm_down(dbm, size);
-            cdd past = cdd(dbm,size);
-            past &= bdd;
-            cdd escape = safe & past;
-            allThatKillsUs |= (past - escape);
+
+            dbm::fed_t* bad_fed = new dbm::fed_t(dbm_target,cdd_clocknum);
+            cdd good_copy = good_part_with_fitting_bools;
+            ADBM(dbm_good);
+            cdd bdd_parts_reached = cdd_false();
+            while (!cdd_isterminal(good_copy.handle()) && cdd_info(good_copy.handle())->type != TYPE_BDD) {
+                extraction_result res_good = cdd_extract_bdd_and_dbm(good_copy);
+                good_copy = cdd_reduce(cdd_remove_negative(res_good.CDD_part));
+                dbm_good = res_good.dbm;
+                cdd bdd_good = res_good.BDD_part;
+                dbm::fed_t* good_fed = new dbm::fed_t(dbm_good,cdd_clocknum);
+                dbm::fed_t pred_fed = bad_fed->predt(*good_fed);
+                allThatKillsUs |= (cdd_from_fed(pred_fed)& bdd_good & bdd_target);
+                bdd_parts_reached |= bdd_good & bdd_target;
+            }
+            // for all boolean valuations we did not reach with our safe CDD, we take the past of the current target DBM
+            cdd bdd_parts_not_reached = cdd_true() - bdd_parts_reached;
+            dbm_down(dbm_target,size);
+            cdd past = cdd (dbm_target, size) & bdd_parts_not_reached;
+            allThatKillsUs |= past;
+
         }
         else
         {
-            dbm_down(dbm,size);
-            cdd past = cdd (dbm, size) & bdd;
+            dbm_down(dbm_target,size);
+            cdd past = cdd (dbm_target, size) & bdd_target;
             allThatKillsUs |= past;
         }
     }

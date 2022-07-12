@@ -9,6 +9,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <dbm/print.h>
 #include "cdd/kernel.h"
 #include "dbm/fed.h"
 
@@ -130,6 +131,7 @@ cdd cdd_from_fed(dbm::fed_t& fed)
 
 cdd cdd_predt(const cdd&  target, const cdd&  safe)
 {
+    printf("Version: 2022-07-04:11:08\n");
     cdd allThatKillsUs = cdd_false();
     uint32_t size = cdd_clocknum;
     cdd copy = target;
@@ -139,6 +141,8 @@ cdd cdd_predt(const cdd&  target, const cdd&  safe)
         extraction_result res = cdd_extract_bdd_and_dbm(copy);
         copy = cdd_reduce(cdd_remove_negative(res.CDD_part));
         dbm_target = res.dbm;
+        printf("current dbm_target \n");
+        dbm_print(stdout, dbm_target, size);
         cdd bdd_target = res.BDD_part;
         cdd good_part_with_fitting_bools = bdd_target & safe;
         if (good_part_with_fitting_bools != cdd_false())
@@ -152,9 +156,12 @@ cdd cdd_predt(const cdd&  target, const cdd&  safe)
                 extraction_result res_good = cdd_extract_bdd_and_dbm(good_copy);
                 good_copy = cdd_reduce(cdd_remove_negative(res_good.CDD_part));
                 dbm_good = res_good.dbm;
+                printf("current dbm_good \n");
+                dbm_print(stdout, dbm_good, size);
                 cdd bdd_good = res_good.BDD_part;
                 dbm::fed_t* good_fed = new dbm::fed_t(dbm_good,cdd_clocknum);
                 dbm::fed_t pred_fed = bad_fed->predt(*good_fed);
+                cdd_printdot(cdd_from_fed(pred_fed),true);
                 allThatKillsUs |= (cdd_from_fed(pred_fed)& bdd_good & bdd_target);
                 bdd_parts_reached |= bdd_good & bdd_target;
             }

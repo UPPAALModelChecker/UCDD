@@ -116,22 +116,23 @@ cdd cdd_delay(const cdd& state)
     return res;
 }
 
-cdd cdd_from_fed(dbm::fed_t& fed)
+cdd cdd_from_fed(const dbm::fed_t& fed)
 {
+    dbm::fed_t copy = dbm::fed_t(fed);
     uint32_t size = cdd_clocknum;
     cdd res= cdd_false();
-    while (fed.size()>0)
+    while (copy.size()>0)
     {
-        dbm::dbm_t current = fed.const_dbmt();
+        dbm::dbm_t current = copy.const_dbmt();
         res |= cdd(current.dbm(),size);
-        fed.removeThisDBM(current);
+        copy.removeThisDBM(current);
     }
     return res;
 }
 
 cdd cdd_predt(const cdd&  target, const cdd&  safe)
 {
-    printf("Version: 2022-07-04:11:08\n");
+    printf("Version: 2022-07-04 12:01\n");
     cdd allThatKillsUs = cdd_false();
     uint32_t size = cdd_clocknum;
     cdd copy = target;
@@ -152,6 +153,8 @@ cdd cdd_predt(const cdd&  target, const cdd&  safe)
             cdd good_copy = good_part_with_fitting_bools;
             ADBM(dbm_good);
             cdd bdd_parts_reached = cdd_false();
+
+            dbm::fed_t* good_fed = new dbm::fed_t(cdd_clocknum);
             while (!cdd_isterminal(good_copy.handle()) && cdd_info(good_copy.handle())->type != TYPE_BDD) {
                 extraction_result res_good = cdd_extract_bdd_and_dbm(good_copy);
                 good_copy = cdd_reduce(cdd_remove_negative(res_good.CDD_part));
@@ -159,21 +162,23 @@ cdd cdd_predt(const cdd&  target, const cdd&  safe)
                 printf("current dbm_good \n");
                 dbm_print(stdout, dbm_good, size);
                 cdd bdd_good = res_good.BDD_part;
-                dbm::fed_t* good_fed = new dbm::fed_t(dbm_good,cdd_clocknum);
-                dbm::fed_t pred_fed = bad_fed->predt(*good_fed);
-                cdd_printdot(cdd_from_fed(pred_fed),true);
-                allThatKillsUs |= (cdd_from_fed(pred_fed)& bdd_good & bdd_target);
-                bdd_parts_reached |= bdd_good & bdd_target;
+                good_fed->add(dbm_good, size);
             }
+
+            dbm::fed_t pred_fed = bad_fed->predt(*good_fed);
+            cdd_printdot(cdd_from_fed(pred_fed),true);
+
+            cdd_printdot(bdd_target,true);
+            allThatKillsUs |= cdd_from_fed(pred_fed);//&  bdd_target);
+            cdd_printdot(allThatKillsUs,true);
+
+            bdd_parts_reached |=  bdd_target;
             // for all boolean valuations we did not reach with our safe CDD, we take the past of the current target DBM
-            cdd bdd_parts_not_reached = cdd_true() - bdd_parts_reached;
-            dbm_down(dbm_target,size);
-            cdd past = cdd (dbm_target, size) & bdd_parts_not_reached;
-            allThatKillsUs |= past;
 
         }
         else
         {
+            printf("reached the else part");
             dbm_down(dbm_target,size);
             cdd past = cdd (dbm_target, size) & bdd_target;
             allThatKillsUs |= past;

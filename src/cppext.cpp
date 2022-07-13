@@ -98,10 +98,12 @@ extraction_result cdd_extract_bdd_and_dbm(const cdd& state)
  */
 cdd cdd_delay(const cdd& state)
 {
+    // First some trivial cases.
     if (cdd_isterminal(state.handle()))
         return state;
     if (cdd_info(state.handle())->type == TYPE_BDD)
         return state;
+
     uint32_t size = cdd_clocknum;
     cdd copy = state;
     cdd res = cdd_false();
@@ -141,6 +143,12 @@ cdd cdd_from_fed(const dbm::fed_t& fed)
  */
 cdd cdd_predt(const cdd& target, const cdd& safe)
 {
+    // First some trivial cases.
+    if (cdd_isterminal(target.handle()))
+        return target;
+    if (cdd_info(target.handle())->type == TYPE_BDD)
+        return target;
+
     cdd allThatKillsUs = cdd_false();
     uint32_t size = cdd_clocknum;
     cdd copy = target;
@@ -244,10 +252,12 @@ cdd cdd_delay_invariant(const cdd& state, const cdd& invar)
  */
 cdd cdd_past(const cdd& state)
 {
+    // First some trivial cases.
     if (cdd_isterminal(state.handle()))
         return state;
     if (cdd_info(state.handle())->type == TYPE_BDD)
         return state;
+
     uint32_t size = cdd_clocknum;
     cdd copy = state;
     cdd res = cdd_false();

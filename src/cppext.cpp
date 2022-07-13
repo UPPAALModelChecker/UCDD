@@ -121,15 +121,18 @@ cdd cdd_delay(const cdd& state)
     return res;
 }
 
+/**
+ * Construct a cdd from a federation.
+ * @param fed a federation
+ * @return the cdd representing \a fed.
+ */
 cdd cdd_from_fed(const dbm::fed_t& fed)
 {
     dbm::fed_t copy = dbm::fed_t(fed);
     uint32_t size = cdd_clocknum;
     cdd res = cdd_false();
-    while (copy.size() > 0) {
-        dbm::dbm_t current = copy.const_dbmt();
-        res |= cdd(current.dbm(), size);
-        copy.removeThisDBM(current);
+    for (dbm::fed_t::const_iterator iter(fed); !iter.null(); ++iter) {
+        res |= cdd(iter(), size);
     }
     return res;
 }

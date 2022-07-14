@@ -313,6 +313,72 @@ cdd cdd_past(const cdd& state)
     return res;
 }
 
+int* resultArrays;
+int currentTrace;
+
+void cdd_bdd_to_array_rec(ddNode* r, int32_t* trace_vars,  int32_t* trace_values, int32_t  current_step, bool negated, int num_bools)
+{
+    if (r == cddtrue) {
+        printf("correct trace \n");
+        int i;
+        for (i = 0; i <= (sizeof(trace_vars) / sizeof(trace_vars[0])); i++) {
+            printf("%i\n", trace_vars[i]);
+            printf("%i\n", trace_values[i]);
+        }
+        return;
+    }
+    if (r == cddfalse)
+    {
+        printf("incorrect trace");
+        return;
+    }
+
+    if (cdd_info(r)->type == TYPE_BDD) {
+        bddNode* node = bdd_node(r);
+
+        int trace_vars1[num_bools];
+        int trace_vars2[num_bools];
+        int trace_values1[num_bools];
+        int trace_values2[num_bools];
+        for (int i = 0; i < num_bools; i++) {
+            trace_vars1[i] = trace_vars[i];
+            trace_vars2[i] = trace_vars[i];
+            trace_values1[i] = trace_values[i];
+            trace_values2[i] = trace_values[i];
+        }
+        trace_vars1[current_step]=node->level;
+        trace_values1[current_step]=1;
+
+        int* varPtr1 = trace_vars1;
+        int* valuesPtr1 = trace_values1;
+        cdd_bdd_to_array_rec(node->high, varPtr1,valuesPtr1,current_step+1, negated ^ cdd_is_negated(r), num_bools);
+
+        trace_vars2[current_step]=node->level;
+        trace_values2[current_step]=0;
+
+        int* varPtr2 = trace_vars2;
+        int* valuesPtr2 = trace_values2;
+        cdd_bdd_to_array_rec(node->low, varPtr2,valuesPtr2,current_step+1, negated ^ cdd_is_negated(r), num_bools);
+    }
+    else {
+        printf("not called with a BDD node");
+    }
+}
+
+void cdd_bdd_to_array(const cdd& state, int num_bools)
+{
+    currentTrace=0;
+    int vars[num_bools];
+    int* varsPtr = vars;
+    int values[num_bools];
+    int* valuesPtr = values;
+    for (int i = 0; i < num_bools; i++) {
+        vars[i]=-1;
+        values[i]=-1;
+    }
+    cdd_bdd_to_array_rec(state.handle(),varsPtr,valuesPtr, 0,false, num_bools);
+}
+
 /**
  * Apply clock and boolean variable resets.
  *

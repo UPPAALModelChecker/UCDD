@@ -138,8 +138,97 @@ cdd cdd_from_fed(const dbm::fed_t& fed)
 }
 
 /**
+ * Get the timed predecessor of the given (bad) target dbm and target bdd that cannot be
+ * saved (i.e. reached) by delaying into \a safe.
+ *
+ * <p>If there is an overlap between \a target and \a safe, the overlap is considered
+ * to be saved.</p>
+ * @param dbm_target the target dbm
+ * @param bdd_target the target bdd
+ * @param safe the safe cdd
+ * @return a cdd containing states that can delay into \a target without reaching \a safe.
+ */
+cdd cdd_predt_dbm(raw_t* dbm_target, cdd bdd_target, const cdd& safe)
+{
+    uint32_t size = cdd_clocknum;
+    cdd result = cdd_false();
+
+    // Check whether the safe has an overlapping BDD part with the target.
+    cdd good_part_with_fitting_bools = bdd_target & safe;
+    if (good_part_with_fitting_bools != cdd_false()) {
+        // For each possible combination of boolean valuations,
+        // compute the part of safe that overlaps with it.
+        for (int i = 0; i < pow(2, cdd_varnum); i++) {
+            cdd all_booleans = cdd_true();
+            for (int j = 0; j < cdd_varnum; j++) {
+                bool current = (i & 1 << j) != 0;
+                if (current) {
+                    all_booleans &= cdd_bddvarpp(bdd_start_level + j);
+                } else {
+                    all_booleans &= cdd_bddnvarpp(bdd_start_level + j);
+                }
+            }
+
+            // No need to test combinations that don't satisfy the bad part.
+            if (cdd_equiv(all_booleans & bdd_target, cdd_false())) {
+                continue;
+            }
+
+            // Paranoia check.
+            assert(!cdd_eval_false(all_booleans & bdd_target));
+
+            dbm::fed_t* bad_fed = new dbm::fed_t(dbm_target, cdd_clocknum);
+            ADBM(dbm_good);
+            cdd good_copy = good_part_with_fitting_bools & all_booleans;
+
+            if (!cdd_eval_false(good_copy)) {
+                dbm::fed_t* good_fed = new dbm::fed_t(cdd_clocknum);
+                while (!cdd_isterminal(good_copy.handle()) && cdd_info(good_copy.handle())->type != TYPE_BDD) {
+                    extraction_result res_good = cdd_extract_bdd_and_dbm(good_copy);
+                    good_copy = cdd_reduce(cdd_remove_negative(res_good.CDD_part));
+                    dbm_good = res_good.dbm;
+                    cdd bdd_good = res_good.BDD_part;
+                    good_fed->add(dbm_good, size);
+                }
+
+                // If good_fed is empty, good_copy did not contain any DBM. This has the interpretation
+                // of an unbounded DBM.
+                if (good_fed->isEmpty()) {
+                    dbm_init(dbm_good, size);
+                    good_fed = new dbm::fed_t(dbm_good, cdd_clocknum);
+                }
+
+                dbm::fed_t pred_fed = bad_fed->predt(*good_fed);
+                result |= cdd_from_fed(pred_fed) & all_booleans;
+
+            } else {
+                // For all boolean valuations we did not reach with our safe CDD, we take the past of the
+                // current target DBM.
+                ADBM(local);
+                dbm_copy(local, dbm_target, size);
+                dbm_down(local, size);
+                cdd past = cdd(local, size) & all_booleans;
+                result |= past;
+            }
+        }
+
+    } else {
+        // Safe does not have an overlapping part with the target BDD.
+        // So the complete past of this DBM is bad.
+        dbm_down(dbm_target, size);
+        cdd past = cdd(dbm_target, size) & bdd_target;
+        result |= past;
+    }
+
+    return result;
+}
+
+/**
  * Get the timed predecessor of the given (bad) \a target state that cannot be
  * saved (i.e. reached) by delaying into \a safe.
+ *
+ * <p>If there is an overlap between \a target and \a safe, the overlap is considered
+ * to be saved.</p>
  * @param target the target cdd
  * @param safe the safe cdd
  * @return a cdd containing states that can delay into \a target without reaching \a safe.
@@ -147,15 +236,20 @@ cdd cdd_from_fed(const dbm::fed_t& fed)
 cdd cdd_predt(const cdd& target, const cdd& safe)
 {
     // First some trivial cases.
-    if (cdd_isterminal(target.handle()))
+    if (target == cdd_false())
         return target;
-    if (cdd_info(target.handle())->type == TYPE_BDD)
-        return target;
+    if (safe == cdd_true())
+        return cdd_false();
 
     cdd allThatKillsUs = cdd_false();
     uint32_t size = cdd_clocknum;
     cdd copy = target;
     ADBM(dbm_target);
+
+    if (cdd_isterminal(target.handle()) || cdd_info(target.handle())->type == TYPE_BDD) {
+        dbm_init(dbm_target, size);
+        return cdd_predt_dbm(dbm_target, target, safe);
+    }
 
     // Split target into DBMs.
     while (!cdd_isterminal(copy.handle()) && cdd_info(copy.handle())->type != TYPE_BDD) {
@@ -164,65 +258,7 @@ cdd cdd_predt(const cdd& target, const cdd& safe)
         dbm_target = res.dbm;
         cdd bdd_target = res.BDD_part;
 
-        // Check whether the safe has an overlapping BDD part with the target.
-        cdd good_part_with_fitting_bools = bdd_target & safe;
-        if (good_part_with_fitting_bools != cdd_false()) {
-            // For each possible combination of boolean valuations,
-            // compute the part of safe that overlaps with it.
-            for (int i = 0; i < pow(2, cdd_varnum); i++) {
-                cdd all_booleans = cdd_true();
-                for (int j = 0; j < cdd_varnum; j++) {
-                    bool current = (i & 1 << j) != 0;
-                    if (current) {
-                        all_booleans &= cdd_bddvarpp(bdd_start_level + j);
-                    } else {
-                        all_booleans &= cdd_bddnvarpp(bdd_start_level + j);
-                    }
-                }
-
-                // No need to test combinations that don't satisfy the bad part.
-                if (!cdd_equiv(all_booleans & bdd_target, cdd_false())) {
-                    continue;
-                }
-
-                // Paranoia check.
-                assert(!cdd_eval_false(all_booleans & bdd_target));
-
-                dbm::fed_t* bad_fed = new dbm::fed_t(dbm_target, cdd_clocknum);
-                ADBM(dbm_good);
-                cdd good_copy = good_part_with_fitting_bools & all_booleans;
-
-                if (!cdd_eval_false(good_copy)) {
-                    dbm::fed_t* good_fed = new dbm::fed_t(cdd_clocknum);
-                    while (!cdd_isterminal(good_copy.handle()) && cdd_info(good_copy.handle())->type != TYPE_BDD) {
-                        extraction_result res_good = cdd_extract_bdd_and_dbm(good_copy);
-                        good_copy = cdd_reduce(cdd_remove_negative(res_good.CDD_part));
-                        dbm_good = res_good.dbm;
-                        cdd bdd_good = res_good.BDD_part;
-                        good_fed->add(dbm_good, size);
-                    }
-
-                    dbm::fed_t pred_fed = bad_fed->predt(*good_fed);
-                    allThatKillsUs |= cdd_from_fed(pred_fed) & all_booleans;
-
-                } else {
-                    // For all boolean valuations we did not reach with our safe CDD, we take the past of the
-                    // current target DBM.
-                    ADBM(local);
-                    dbm_copy(local, dbm_target, size);
-                    dbm_down(local, size);
-                    cdd past = cdd(local, size) & all_booleans;
-                    allThatKillsUs |= past;
-                }
-            }
-
-        } else {
-            // Safe does not have an overlapping part with the target BDD.
-            // So the complete past of this DBM is bad.
-            dbm_down(dbm_target, size);
-            cdd past = cdd(dbm_target, size) & bdd_target;
-            allThatKillsUs |= past;
-        }
+        allThatKillsUs |= cdd_predt_dbm(dbm_target, bdd_target, safe);
     }
     return allThatKillsUs;
 }

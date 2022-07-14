@@ -313,150 +313,283 @@ cdd cdd_past(const cdd& state)
     return res;
 }
 
-int maxNumberOfTraces =10;
-int** resultArraysVars;// = new int[arraySize];
-int** resultArraysValues;// = new int[arraySize];
-int currentTrace;
-
-void resizeArrays()
+/**
+ * Class for a 2D int32_t matrix where the number of rows is dynamic.
+ */
+class dynamic_two_dim_matrix
 {
-    printf("resizing");
-    int32_t ** newVarsArray = new int32_t*[maxNumberOfTraces *2];
-    int32_t ** newValuesArray = new int32_t*[maxNumberOfTraces *2];
-    for (int i=0; i< maxNumberOfTraces;i++) {
-        newValuesArray[i] = resultArraysValues[i];
-        newVarsArray[i] = resultArraysVars[i];
-    }
-    for(int i = 0; i <= currentTrace; ++i) {
-        delete [] resultArraysVars[i];
-        delete [] resultArraysValues[i];
-    }
-    delete[] resultArraysVars;
-    delete[] resultArraysValues;
-    maxNumberOfTraces = maxNumberOfTraces *2;
-    resultArraysVars = newVarsArray;
-    resultArraysValues = newValuesArray;
-}
-
-
-
-void cdd_bdd_to_array_rec(ddNode* r, int32_t* trace_vars,  int32_t* trace_values, int32_t  current_step, bool negated, int num_bools)
-{
-    if (r == cddtrue && negated ==false) {
-        if (currentTrace== maxNumberOfTraces -1)
-            resizeArrays();
-        resultArraysValues[currentTrace]=new int[num_bools];
-        resultArraysVars[currentTrace]=new int[num_bools];
-        int i;
-        for (i = 0; i < num_bools; i++) {
-            resultArraysValues[currentTrace][i]=trace_values[i];
-            resultArraysVars[currentTrace][i]=trace_vars[i];
-        }
-        currentTrace++;
-        delete[] trace_values;
-        delete[] trace_vars;
-        return;
-    }
-    if (r == cddtrue && negated ==true) {
-        delete[] trace_values;
-        delete[] trace_vars;
-        return;
-    }
-    if (r == cddfalse && negated ==true)
+public:
+    /**
+     * Constructor for the \a dynamic_two_dim_matrix class.
+     * @param init_num_rows the initial number of rows of the matrix.
+     * @param num_cols the fixed number of columns.
+     * @param initial_value the initial value for each element of the matrix.
+     */
+    dynamic_two_dim_matrix(int init_num_rows, int num_cols, int32_t initial_value)
     {
+        assert(init_num_rows > 0);
+        assert(num_cols > 0);
+        num_rows = init_num_rows;
+        this->num_cols = num_cols;
+        current_row = 0;
+        this->initial_value = initial_value;
 
-            if (currentTrace== maxNumberOfTraces -1)
-                resizeArrays();
-            resultArraysValues[currentTrace]=new int[num_bools];
-            resultArraysVars[currentTrace]=new int[num_bools];
-            int i;
-            for (i = 0; i < num_bools; i++) {
-                resultArraysValues[currentTrace][i]=trace_values[i];
-                resultArraysVars[currentTrace][i]=trace_vars[i];
-            }
-            currentTrace++;
-            delete[] trace_values;
-            delete[] trace_vars;
-            return;
+        // Initialize the matrix.
+        matrix = new int32_t*[num_rows];
+        rows_to_be_ignored = new bool[num_rows];
+        for (int i = 0; i < num_rows; i++) {
+            matrix[i] = initialized_array();
+            rows_to_be_ignored[i] = false;
+        }
     }
-    if (r == cddfalse && negated == false) {
-        delete[] trace_values;
-        delete[] trace_vars;
+
+    /**
+     * Add a new value to the current row at the provided column index.
+     * @param value the value to add.
+     * @param column_index the column index.
+     */
+    void add_value_to_row(int32_t value, int column_index)
+    {
+        assert(column_index < num_cols);
+        assert(column_index >= 0);
+        matrix[current_row][column_index] = value;
+    }
+
+    /**
+     * Change the current row to the next row. Resizing is taking place when necessary. The values
+     * of the current row are copied to the next row up to and including the provided column.
+     * @param copy_to_column copy the previous values up to this column index (including this column).
+     */
+    void next_row(int copy_to_column)
+    {
+        assert(copy_to_column < num_cols);
+        current_row++;
+
+        // Check whether we have to resize.
+        if (current_row == num_rows) {
+            resize();
+        }
+
+        // Copy values from the previous row.
+        for (int j = 0; j <= copy_to_column; j++) {
+            matrix[current_row][j] = matrix[current_row - 1][j];
+        }
+    }
+
+    /**
+     * Indicate that the current row needs to be ignored.
+     */
+    void ignore_current_row() { rows_to_be_ignored[current_row] = true; }
+
+    /**
+     * Delete the ignored rows from the matrix and shift the remaining rows upwards, i.e.,
+     * if row \a is to be ignored, the new row \i of the matrix is row \i + 1;
+     */
+    void delete_ignored_rows()
+    {
+        int num_ignored_so_far = 0;
+        for (int i = 0; i <= current_row; i++) {
+            if (rows_to_be_ignored[i]) {
+                num_ignored_so_far++;
+                delete[] matrix[i];
+            } else {
+                matrix[i - num_ignored_so_far] = matrix[i];
+            }
+        }
+
+        // Add empty rows at the end. No need to go beyond current_row, as those are still untouched rows.
+        for (int i = current_row - num_ignored_so_far + 1; i <= current_row; i++) {
+            matrix[i] = initialized_array();
+        }
+        current_row -= num_ignored_so_far;
+    }
+
+    /**
+     * Get the current matrix as a single dimensional array of size \a num_cols * (\a current_row + 1).
+     * @return the matrix as a single row array.
+     */
+    int32_t* get_array()
+    {
+        int32_t* array = new int32_t[num_cols * (current_row + 1)];
+
+        for (int i = 0; i <= current_row; i++) {
+            for (int j = 0; j < num_cols; j++) {
+                array[i * num_cols + j] = matrix[i][j];
+            }
+        }
+
+        return array;
+    }
+
+    /**
+     * Get the current row index.
+     * @return the current row index.
+     */
+    int get_current_row() { return current_row; }
+
+    /**
+     * Clean up the matrix by deleting the memory pointers. Should be called before deleting the actual object.
+     */
+    void clean()
+    {
+        for (int i = 0; i < num_rows; i++) {
+            delete[] matrix[i];
+        }
+        delete[] matrix;
+    }
+
+private:
+    int32_t** matrix;
+    int num_rows;
+    int num_cols;
+    int current_row;
+    int32_t initial_value;
+    bool* rows_to_be_ignored;
+
+    /**
+     * Create an array of size \a num_cols filled with the initial value.
+     * @return an array with initial values.
+     */
+    int32_t* initialized_array()
+    {
+        int32_t* array = new int32_t[num_cols];
+        for (int j = 0; j < num_cols; j++) {
+            array[j] = initial_value;
+        }
+        return array;
+    }
+
+    /**
+     * Resize the matrix by doubling the number of rows allocated in memory.
+     */
+    void resize()
+    {
+        int32_t** new_matrix = new int32_t*[num_rows * 2];
+        bool* new_rows_to_be_ignored = new bool[num_rows * 2];
+
+        // Copy old rows into new matrix.
+        for (int i = 0; i < num_rows; i++) {
+            new_matrix[i] = matrix[i];
+            new_rows_to_be_ignored[i] = rows_to_be_ignored[i];
+        }
+
+        // Add initial values to the new rows.
+        for (int i = num_rows; i < 2 * num_rows; i++) {
+            new_matrix[i] = initialized_array();
+            new_rows_to_be_ignored[i] = false;
+        }
+
+        // Assign new stuff to the class properties.
+        delete matrix;
+        delete rows_to_be_ignored;
+        matrix = new_matrix;
+        rows_to_be_ignored = new_rows_to_be_ignored;
+        num_rows = 2 * num_rows;
+    }
+};
+
+/**
+ * Transform a BDD recursively into an matrix representation.
+ *
+ * @param r a cdd node from the bdd.
+ * @param varsMatrix the matrix containing the traces with the boolean variable id numbers.
+ * @param valuesMatrix the matrix containing the traces with the boolean variable values.
+ * @param current_step the current step number (= depth of the trace from the top BDD node).
+ * @param negated Whether this node is reached by (an odd number of) negated node(s).
+ * @param num_bools the number of boolean variables.
+ */
+void cdd_bdd_to_matrix_rec(ddNode* r, dynamic_two_dim_matrix* varsMatrix, dynamic_two_dim_matrix* valuesMatrix,
+                           int32_t current_step, bool negated)
+{
+    // The four terminating cases.
+    if (r == cddtrue && !negated) {
+        // Nothing special has to be done.
+        return;
+    }
+    if (r == cddtrue && negated) {
+        // We cannot delete the row here already, as we might still copy part of the
+        // row (trace) in the depth-first search. Therefore, we only mark the current row
+        // as to be ignored.
+        varsMatrix->ignore_current_row();
+        valuesMatrix->ignore_current_row();
+        return;
+    }
+    if (r == cddfalse && negated) {
+        // Nothing special has to be done.
+        return;
+    }
+    if (r == cddfalse && !negated) {
+        // We cannot delete the row here already, as we might still copy part of the
+        // row (trace) in the depth-first search. Therefore, we only mark the current row
+        // as to be ignored.
+        varsMatrix->ignore_current_row();
+        valuesMatrix->ignore_current_row();
         return;
     }
 
-
+    // We have not reached the end of a trace.
+    assert(!cdd_isterminal(r));
     if (cdd_info(r)->type == TYPE_BDD) {
         bddNode* node = bdd_node(r);
 
-        int32_t *trace_vars1 = new int32_t[num_bools];
-        int32_t *trace_vars2 = new int32_t[num_bools];
-        int32_t *trace_values1 = new int32_t[num_bools];
-        int32_t *trace_values2 = new int32_t[num_bools];
-        for (int i = 0; i < num_bools; i++) {
-            trace_vars1[i] = trace_vars[i];
-            trace_vars2[i] = trace_vars[i];
-            trace_values1[i] = trace_values[i];
-            trace_values2[i] = trace_values[i];
-        }
-        trace_vars1[current_step]=node->level;
-        trace_values1[current_step]=1;
-        delete[] trace_values;
-        delete[] trace_vars;
+        // First follow the true child of the BDD node.
+        varsMatrix->add_value_to_row(node->level, current_step);
+        valuesMatrix->add_value_to_row(1, current_step);
+        cdd_bdd_to_matrix_rec(node->high, varsMatrix, valuesMatrix, current_step + 1, negated ^ cdd_is_negated(r));
 
-
-        cdd_bdd_to_array_rec(node->high, trace_vars1,trace_values1,current_step+1, negated ^ cdd_is_negated(r), num_bools);
-
-        trace_vars2[current_step]=node->level;
-        trace_values2[current_step]=0;
-        cdd_bdd_to_array_rec(node->low, trace_vars2,trace_values2,current_step+1, negated ^ cdd_is_negated(r), num_bools);
-        }
- else {
+        // Now follow the false child of the BDD node.
+        varsMatrix->next_row(current_step);
+        valuesMatrix->next_row(current_step);
+        valuesMatrix->add_value_to_row(0, current_step);
+        cdd_bdd_to_matrix_rec(node->low, varsMatrix, valuesMatrix, current_step + 1, negated ^ cdd_is_negated(r));
+    } else {
         printf("not called with a BDD node");
     }
 }
 
-
+/**
+ * Transform a BDD into an array representation.
+ *
+ * TODO some explanation about the structure of the array.
+ * <p></p>
+ *
+ * @param state a cdd containing only BDD or terminal nodes
+ * @param num_bools the number of boolean variables
+ * @return an array representation of the BDD.
+ */
 bdd_arrays cdd_bdd_to_array(const cdd& state, int num_bools)
 {
-    currentTrace=0;
-    maxNumberOfTraces =100;
-    resultArraysVars=new int32_t*[maxNumberOfTraces];
-    resultArraysValues=new int32_t*[maxNumberOfTraces];
+    // TODO can num_bools safely removed? I.e., is num_bools always the same as cdd_varnum in kernel.h?
+    int init_num_of_traces = std::min(2 << num_bools, 100);  // 2<<num_bools <==> 2 ^ num_bools
+    int32_t initial_value = -1;
 
-    int32_t *vars = new int32_t[num_bools];
-    int32_t *values = new int32_t[num_bools];
-    for (int i = 0; i < num_bools; i++) {
-        vars[i]=-1;
-        values[i]=-1;
+    dynamic_two_dim_matrix* varsMatrix = new dynamic_two_dim_matrix(init_num_of_traces, num_bools, initial_value);
+    dynamic_two_dim_matrix* valuesMatrix = new dynamic_two_dim_matrix(init_num_of_traces, num_bools, initial_value);
+
+    // Perform the actual depth-first search.
+    cdd_bdd_to_matrix_rec(state.handle(), varsMatrix, valuesMatrix, 0, false);
+
+    // Delete ignored rows from the result.
+    assert(varsMatrix->get_current_row() == valuesMatrix->get_current_row());
+    varsMatrix->delete_ignored_rows();
+    valuesMatrix->delete_ignored_rows();
+    assert(varsMatrix->get_current_row() == valuesMatrix->get_current_row());
+
+    bdd_arrays arrays;
+    arrays.vars = varsMatrix->get_array();
+    arrays.values = valuesMatrix->get_array();
+    arrays.numBools = num_bools;
+    arrays.numTraces = varsMatrix->get_current_row() + 1;
+
+    // Check for the special case when no trace was effectively generated (or all traces ended in
+    // the false terminal)
+    if (arrays.vars[0] == initial_value) {
+        arrays.numTraces = 0;
     }
-    cdd_bdd_to_array_rec(state.handle(),vars,values, 0,false, num_bools);
 
-
-    int32_t *varRes = new int32_t[(num_bools)*(currentTrace)];
-    int32_t *valRes = new int32_t[(num_bools)*(currentTrace)];
-    for (uint32_t  i = 0; i< currentTrace; i++)
-    {
-        for (uint32_t  j= 0; j<num_bools;j++) {
-            varRes[i * (num_bools) + j] = resultArraysVars[i][j];
-            valRes[i * (num_bools) + j] = resultArraysValues[i][j];
-        }
-    }
-
-
-    bdd_arrays arys;
-    arys.values=valRes;
-    arys.vars=varRes;
-    arys.numTraces=currentTrace;
-    arys.numBools=num_bools;
-
-    for(int i = 0; i < currentTrace; ++i) {
-        delete [] resultArraysVars[i];
-        delete [] resultArraysValues[i];
-    }
-    delete[] resultArraysVars;
-    delete[] resultArraysValues;
-    return arys;
+    varsMatrix->clean();
+    valuesMatrix->clean();
+    return arrays;
 }
 
 /**

@@ -772,6 +772,41 @@ void test_transition_back_past(size_t size)
                                     num_bools)) == cdd_false());
 }
 
+void test_predt(size_t size)
+{
+    // First some trivial cases.
+    REQUIRE(cdd_equiv(cdd_predt(cdd_true(), cdd_true()), cdd_false()));
+    REQUIRE(cdd_equiv(cdd_predt(cdd_true(), cdd_false()), cdd_remove_negative(cdd_true())));
+    REQUIRE(cdd_equiv(cdd_predt(cdd_false(), cdd_true()), cdd_false()));
+    REQUIRE(cdd_equiv(cdd_predt(cdd_false(), cdd_false()), cdd_false()));
+
+    // Create a CDD containing random DBMs.
+    cdd cdd_part;
+    auto dbm = dbm_wrap{size};
+    int n_dbms = 8;
+
+    for (uint32_t i = 0; i < n_dbms; i++) {
+        dbm.generate();
+        cdd_part |= cdd(dbm.raw(), dbm.size());
+    }
+
+    // Create a random BDD.
+    cdd bdd_part = generate_bdd(size);
+    cdd cdd1 = cdd_part & bdd_part;
+
+    // First some checks when nothing can save us.
+    // cdd_part \subset cdd_predt(cdd_part) <==> cdd_part & !cdd_predt(cdd_part) == false
+    REQUIRE((!cdd_predt(cdd_part, cdd_false()) & cdd_remove_negative(cdd_part)) == cdd_false());
+    // cdd_predt(cdd_part) \subset cdd_past(cdd_part) <==> cdd_predt(cdd_part) & !cdd_past(cdd_part) == false
+    REQUIRE((!cdd_past(cdd_part) & cdd_predt(cdd_part, cdd_false())) == cdd_false());
+    REQUIRE(cdd_equiv(cdd_predt(bdd_part, cdd_false()), cdd_remove_negative(bdd_part)));
+    // cdd_predt(cdd1) \subset cdd_past(cdd1) <==> cdd_predt(cdd1) & !cdd_past(cdd1) == false
+    REQUIRE((!cdd_past(cdd1) & cdd_predt(cdd1, cdd_false())) == cdd_false());
+    REQUIRE(cdd_equiv(cdd_predt(cdd1, cdd_true()), cdd_false()));
+
+    // TODO: how to check cdd_predt when the safe cdd is a random cdd as well?
+}
+
 static void test(const char* name, TestFunction f, size_t size)
 {
     cout << name << " size = " << size << endl;
@@ -809,6 +844,7 @@ static void big_test(uint32_t n)
             test("test_transition  ", test_transition, i);
             test("test_transition_back", test_transition_back, i);
             test("test_transition_back_past", test_transition_back_past, i);
+            test("test_predt       ", test_predt, i);
         }
         test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;

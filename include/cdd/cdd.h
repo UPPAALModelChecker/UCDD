@@ -739,7 +739,7 @@ extern ddNode* cddtrue;
  */
 
 struct extraction_result;
-
+struct bdd_arrays;
 /**
  * C++ encapsulation of a decision diagram node (a ddNode). The class
  * maintains a reference to the node throughout its lifetime.
@@ -871,7 +871,7 @@ private:
     friend bool cdd_equiv(const cdd&, const cdd&);
     friend cdd cdd_delay(const cdd&);
     friend cdd cdd_past(const cdd&);
-    friend void cdd_bdd_to_array(const cdd&, int32_t );
+    friend bdd_arrays cdd_bdd_to_array(const cdd&, int32_t );
     friend cdd cdd_delay_invariant(const cdd&, const cdd&);
     friend cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_values, int32_t num_clock_resets,
                                int32_t* bool_resets, int32_t* bool_values, int32_t num_bool_resets);
@@ -911,6 +911,16 @@ typedef struct extraction_result
     cdd BDD_part; /**< The boolean part below a removed DBM */
     raw_t* dbm;   /**< The removed DBM */
 } extraction_result;
+
+
+/** Structure for returning the logical forumal of a BDD */
+typedef struct bdd_arrays
+{
+    int32_t* vars;      /** the variables that are relevant */
+    int32_t* values;   /** the value the variables have */
+    int32_t numTraces;
+    int32_t numBools;
+} bdd_arrays;
 
 /**
  * Returns true if \a dbm is included in the CDD.

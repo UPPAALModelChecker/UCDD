@@ -313,23 +313,52 @@ cdd cdd_past(const cdd& state)
     return res;
 }
 
-int* resultArrays;
+int arraySize=10;
+int maxNumberOfArrays=10;
+int** resultArraysVars;// = new int[arraySize];
+int** resultArraysValues;// = new int[arraySize];
 int currentTrace;
+
+void resizeArrays()
+{
+    printf("resizing");
+    int ** newVarsArray = new int*[maxNumberOfArrays*2];
+    int ** newValuesArray = new int*[maxNumberOfArrays*2];
+    for (int i=0; i<maxNumberOfArrays;i++) {
+        newValuesArray[i] = resultArraysValues[i];
+        newVarsArray[i] = resultArraysVars[i];
+    }
+    for(int i = 0; i < currentTrace; ++i) {
+        delete [] resultArraysVars[i];
+        delete [] resultArraysValues[i];
+    }
+    delete[] newVarsArray;
+    delete[] newValuesArray;
+    maxNumberOfArrays=maxNumberOfArrays*2;
+    resultArraysVars = newVarsArray;
+    resultArraysValues = newValuesArray;
+}
+
+
 
 void cdd_bdd_to_array_rec(ddNode* r, int32_t* trace_vars,  int32_t* trace_values, int32_t  current_step, bool negated, int num_bools)
 {
     if (r == cddtrue) {
-        printf("correct trace \n");
+        if (currentTrace==maxNumberOfArrays-1)
+            resizeArrays();
+        resultArraysValues[currentTrace]=new int[num_bools];
+        resultArraysVars[currentTrace]=new int[num_bools];
         int i;
         for (i = 0; i <= (sizeof(trace_vars) / sizeof(trace_vars[0])); i++) {
-            printf("%i\n", trace_vars[i]);
-            printf("%i\n", trace_values[i]);
+            resultArraysValues[currentTrace][i]=trace_values[i];
+            resultArraysVars[currentTrace][i]=trace_vars[i];
         }
+        currentTrace++;
         return;
     }
     if (r == cddfalse)
     {
-        printf("incorrect trace");
+
         return;
     }
 
@@ -365,9 +394,15 @@ void cdd_bdd_to_array_rec(ddNode* r, int32_t* trace_vars,  int32_t* trace_values
     }
 }
 
-void cdd_bdd_to_array(const cdd& state, int num_bools)
+
+bdd_arrays cdd_bdd_to_array(const cdd& state, int num_bools)
 {
     currentTrace=0;
+    arraySize=num_bools;
+    maxNumberOfArrays=10;
+    resultArraysVars=new int*[maxNumberOfArrays];
+    resultArraysValues=new int*[maxNumberOfArrays];
+
     int vars[num_bools];
     int* varsPtr = vars;
     int values[num_bools];
@@ -377,6 +412,32 @@ void cdd_bdd_to_array(const cdd& state, int num_bools)
         values[i]=-1;
     }
     cdd_bdd_to_array_rec(state.handle(),varsPtr,valuesPtr, 0,false, num_bools);
+
+    bdd_arrays arys;
+
+    int32_t *varRes = new int32_t[num_bools*currentTrace];
+    int32_t *valRes = new int32_t[num_bools*currentTrace];
+    for (uint32_t  i = 0; i< currentTrace; i++)
+    {
+        for (uint32_t  j= 0; j<num_bools;j++)
+        {
+            varRes[i*num_bools+j]= resultArraysVars[i][j];
+            valRes[i*num_bools+j]= resultArraysVars[i][j];
+        }
+    }
+
+    arys.values=valRes;
+    arys.vars=varRes;
+    arys.numTraces=currentTrace;
+    arys.numBools=num_bools;
+
+    for(int i = 0; i < currentTrace-1; ++i) {
+        delete [] resultArraysVars[i];
+        delete [] resultArraysValues[i];
+    }
+    delete[] resultArraysVars;
+    delete[] resultArraysValues;
+    return arys;
 }
 
 /**

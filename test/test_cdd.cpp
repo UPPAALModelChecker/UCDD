@@ -827,6 +827,24 @@ void test_predt(size_t size)
     REQUIRE(cdd_equiv(cdd_predt(test, right), cdd_remove_negative(cdd_past(left))));
 }
 
+void test_bdd_to_array(size_t size)
+{
+    // First some trivial cases.
+    bdd_arrays result = cdd_bdd_to_array(cdd_true(), cdd_varnum);
+    REQUIRE(result.numBools == cdd_varnum);
+    REQUIRE(result.numTraces == 0);
+
+    // Create a random BDD.
+    cdd bdd_part = generate_bdd(size);
+
+    bdd_arrays result1 = cdd_bdd_to_array(bdd_part, cdd_varnum);
+    if (cdd_isterminal(bdd_part.handle())) {
+        REQUIRE(result1.numTraces == 0);
+    } else {
+        REQUIRE(result1.numTraces > 0);
+    }
+}
+
 static void test(const char* name, TestFunction f, size_t size)
 {
     cout << name << " size = " << size << endl;
@@ -865,6 +883,7 @@ static void big_test(uint32_t n)
             test("test_transition_back", test_transition_back, i);
             test("test_transition_back_past", test_transition_back_past, i);
             test("test_predt       ", test_predt, i);
+            test("test_bdd_to_array", test_bdd_to_array, i);
         }
         test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;

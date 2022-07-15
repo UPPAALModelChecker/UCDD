@@ -35,6 +35,7 @@ extern "C" {
 #define bnd_add(a, b)            (((a) == INF || (b) == INF) ? INF : (((((a) & ~(0x1)) + ((b) & ~(0x1)))) | ((a) & (b)&0x1)))
 #define bnd_l2u(b)               ((b) == -INF ? INF : ((-((b) & ~(0x1))) | ((b)&0x1)) ^ 0x1)
 #define bnd_u2l(b)               ((b) == INF ? -INF : ((-((b) & ~(0x1))) | ((b)&0x1)) ^ 0x1)
+#define bnd_flip_strict(b)       ((b) == ((-((b) & ~(0x1))) | ((b)&0x1)) ^ 0x1)
 
 ///////////////////////////////////////////////////////////////////////////
 /// @defgroup kernel Internal interfaces
@@ -411,6 +412,10 @@ ddNode* cdd_make_cdd_node(int32_t level, Elem* children, int32_t len);
  */
 #define cdd_triple(a, b, c) ((uintptr_t)(cdd_pair(cdd_pair(a, b), c)))
 
+/**
+ * Get the cdd node info. Can only be called for non-terminal nodes.
+ * Otherwise it will result in a segmentation fault.
+ */
 #define cdd_info(node) (cdd_levelinfo + cdd_rglr(node)->level)
 
 extern int32_t cdd_errorcond;

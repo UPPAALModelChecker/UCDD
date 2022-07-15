@@ -881,7 +881,7 @@ private:
                                    int32_t num_clock_resets, int32_t* bool_resets, int32_t num_bool_resets);
     friend cdd cdd_transition_back_past(const cdd& state, const cdd& guard, const cdd& update, int32_t* clock_resets,
                                         int32_t num_clock_resets, int32_t* bool_resets, int32_t num_bool_resets);
-    friend cdd cdd_predt(const cdd& target, const cdd&  safe);
+    friend cdd cdd_predt(const cdd& target, const cdd& safe);
     friend cdd cdd_reduce2(const cdd&);
     friend bool cdd_contains(const cdd&, raw_t* dbm, int32_t dim);
     friend cdd cdd_extract_dbm(const cdd&, raw_t* dbm, int32_t dim);

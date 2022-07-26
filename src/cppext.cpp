@@ -111,6 +111,7 @@ cdd cdd_delay(const cdd& state)
         fixed_cdd &= bottom;
         res |= fixed_cdd;
     }
+    free(dbm);
     return res;
 }
 
@@ -158,6 +159,7 @@ cdd cdd_past(const cdd& state)
         dbm_down(dbm, size);
         res |= (cdd(dbm, size) & bottom);
     }
+    free(dbm);
     return res;
 }
 
@@ -212,6 +214,7 @@ cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_valu
             dbm_updateValue(exres.dbm, cdd_clocknum, clock_resets[i], clock_values[i]);
         }
         res |= (cdd(exres.dbm, cdd_clocknum) & bottom);
+        free(exres.dbm);
     }
     return res;
 }
@@ -291,6 +294,7 @@ cdd cdd_transition_back(const cdd& state, const cdd& guard, const cdd& update, i
             dbm_freeClock(exres.dbm, cdd_clocknum, clock_resets[i]);
         }
         res |= (cdd(exres.dbm, cdd_clocknum) & bottom);
+        free(exres.dbm);
     }
     return res & guard;
 }

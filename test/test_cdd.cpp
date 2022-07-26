@@ -34,18 +34,12 @@ using std::cerr;
 using std::cout;
 using base::Timer;
 
-/** Random helper functions. */
-static int uniform(uint32_t a, uint32_t b)
-{
-    RandomGenerator* rg = new RandomGenerator();
-    return rg->uni(a, b);
-}
+static auto rg = RandomGenerator{};  // shared instance of random generator
 
-static bool random_bool()
-{
-    RandomGenerator* rg = new RandomGenerator();
-    return rg->uni(0, 1);
-}
+/** Random helper functions. */
+static int uniform(uint32_t a, uint32_t b) { return rg.uni(a, b); }
+
+static bool random_bool() { return rg.uni(0, 1); }
 
 #define RANGE() (uniform(1, 10000))
 
@@ -186,6 +180,7 @@ static void test_extract_bdd_and_dbm(size_t size)
     // Check the result:
     REQUIRE(dbm_areEqual(er.dbm, dbm1.raw(), size));
     REQUIRE(cdd_equiv(er.BDD_part, cdd2));
+    free(er.dbm);
 }
 
 /* test intersection of CDDs
@@ -850,9 +845,8 @@ TEST_CASE("CDD reduce with size 3")
 
 TEST_CASE("Big CDD test")
 {
-    RandomGenerator* rg = new RandomGenerator();
     uint32_t seed{};
-    rg->set_seed(seed);
+    rg.set_seed(seed);
     dbm_wrap::resetCounters();
     SUBCASE("Size 0") { big_test(0); }
     SUBCASE("Size 1") { big_test(1); }

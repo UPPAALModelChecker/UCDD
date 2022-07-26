@@ -553,9 +553,6 @@ void cdd_bdd_to_matrix_rec(ddNode* r, dynamic_two_dim_matrix* varsMatrix, dynami
 /**
  * Transform a BDD into an array representation.
  *
- * TODO some explanation about the structure of the array.
- * <p></p>
- *
  * @param state a cdd containing only BDD or terminal nodes
  * @return an array representation of the BDD.
  */

@@ -912,13 +912,13 @@ typedef struct extraction_result
     raw_t* dbm;   /**< The removed DBM */
 } extraction_result;
 
-/** Structure for returning the logical formula of a BDD */
+/** Structure for returning the logical formula of a BDD. */
 typedef struct bdd_arrays
 {
-    int32_t* vars;   /** the variables that are relevant */
-    int32_t* values; /** the value the variables have */
-    int32_t numTraces;
-    int32_t numBools;
+    int32_t* vars;     /** The variables that are relevant. Size = numTraces x numBools. */
+    int32_t* values;   /** The value the variables have. Size = numTraces x numBools. */
+    int32_t numTraces; /** The number of traces collected. */
+    int32_t numBools;  /** The number of maximum boolean variables per trace.*/
 } bdd_arrays;
 
 /**

@@ -188,8 +188,7 @@ static void test_extract_bdd_and_dbm(size_t size)
     free(er.dbm);
 }
 
-/* test intersection of CDDs
- */
+/** tests intersection of CDDs */
 static void test_intersection(size_t size)
 {
     cdd cdd1, cdd2, cdd3, cdd4;
@@ -866,7 +865,7 @@ TEST_CASE("Big CDD test")
     SUBCASE("Size 2") { big_test(2); }
     // TODO: the bellow cases pass only on 32-bit, need to fix it
 #if INTPTR_MAX == INT32_MAX
-    SUBCASE("Size 3") { big_test(3, seed); }
-    SUBCASE("Size 10") { big_test(10, seed); }
+    SUBCASE("Size 3") { big_test(3); }
+    SUBCASE("Size 10") { big_test(10); }
 #endif /* 32-bit */
 }

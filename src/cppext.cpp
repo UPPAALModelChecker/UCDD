@@ -10,11 +10,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "dbm/fed.h"
+#include "dbm/print.h"
 #include "cdd/kernel.h"
-
-#include <math.h>
-
-#include <dbm/print.h>
 
 #define ADBM(NAME) raw_t* NAME = allocDBM(size)
 
@@ -131,8 +128,8 @@ cdd cdd_from_fed(const dbm::fed_t& fed)
     dbm::fed_t copy = dbm::fed_t(fed);
     uint32_t size = cdd_clocknum;
     cdd res = cdd_false();
-    for (dbm::fed_t::const_iterator iter(fed); !iter.null(); ++iter) {
-        res |= cdd(iter(), size);
+    for (auto& zone : fed) {
+        res |= cdd(zone.const_dbm(), size);
     }
     return res;
 }
@@ -158,9 +155,9 @@ cdd cdd_predt_dbm(raw_t* dbm_target, cdd bdd_target, const cdd& safe)
     if (good_part_with_fitting_bools != cdd_false()) {
         // For each possible combination of boolean valuations,
         // compute the part of safe that overlaps with it.
-        for (int i = 0; i < pow(2, cdd_varnum); i++) {
+        for (auto i = 0u; i < (1u << cdd_varnum); ++i) {
             cdd all_booleans = cdd_true();
-            for (int j = 0; j < cdd_varnum; j++) {
+            for (auto j = 0u; j < cdd_varnum; ++j) {
                 bool current = (i & 1 << j) != 0;
                 if (current) {
                     all_booleans &= cdd_bddvarpp(bdd_start_level + j);
@@ -177,28 +174,28 @@ cdd cdd_predt_dbm(raw_t* dbm_target, cdd bdd_target, const cdd& safe)
             // Paranoia check.
             assert(!cdd_eval_false(all_booleans & bdd_target));
 
-            dbm::fed_t* bad_fed = new dbm::fed_t(dbm_target, cdd_clocknum);
+            dbm::fed_t bad_fed(dbm_target, cdd_clocknum);
             ADBM(dbm_good);
             cdd good_copy = good_part_with_fitting_bools & all_booleans;
 
             if (!cdd_eval_false(good_copy)) {
-                dbm::fed_t* good_fed = new dbm::fed_t(cdd_clocknum);
+                dbm::fed_t good_fed(cdd_clocknum);
                 while (!cdd_isterminal(good_copy.handle()) && cdd_info(good_copy.handle())->type != TYPE_BDD) {
                     extraction_result res_good = cdd_extract_bdd_and_dbm(good_copy);
                     good_copy = cdd_reduce(cdd_remove_negative(res_good.CDD_part));
                     dbm_good = res_good.dbm;
                     cdd bdd_good = res_good.BDD_part;
-                    good_fed->add(dbm_good, size);
+                    good_fed.add(dbm_good, size);
                 }
 
                 // If good_fed is empty, good_copy did not contain any DBM. This has the interpretation
                 // of an unbounded DBM.
-                if (good_fed->isEmpty()) {
+                if (good_fed.isEmpty()) {
                     dbm_init(dbm_good, size);
-                    good_fed = new dbm::fed_t(dbm_good, cdd_clocknum);
+                    good_fed.add(dbm_good, size);
                 }
 
-                dbm::fed_t pred_fed = bad_fed->predt(*good_fed);
+                dbm::fed_t pred_fed = bad_fed.predt(good_fed);
                 result |= cdd_from_fed(pred_fed) & all_booleans;
 
             } else {

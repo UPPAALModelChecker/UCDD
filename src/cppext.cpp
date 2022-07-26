@@ -180,6 +180,7 @@ cdd cdd_predt_dbm(raw_t* dbm_target, cdd bdd_target, const cdd& safe)
                 while (!cdd_isterminal(good_copy.handle()) && cdd_info(good_copy.handle())->type != TYPE_BDD) {
                     extraction_result res_good = cdd_extract_bdd_and_dbm(good_copy);
                     good_copy = cdd_reduce(cdd_remove_negative(res_good.CDD_part));
+                    free(dbm_good);
                     dbm_good = res_good.dbm;
                     cdd bdd_good = res_good.BDD_part;
                     good_fed.add(dbm_good, cdd_clocknum);
@@ -203,7 +204,9 @@ cdd cdd_predt_dbm(raw_t* dbm_target, cdd bdd_target, const cdd& safe)
                 dbm_down(local, cdd_clocknum);
                 cdd past = cdd(local, cdd_clocknum) & all_booleans;
                 result |= past;
+                free(local);
             }
+            free(dbm_good);
         }
 
     } else {
@@ -241,18 +244,22 @@ cdd cdd_predt(const cdd& target, const cdd& safe)
 
     if (cdd_isterminal(target.handle()) || cdd_info(target.handle())->type == TYPE_BDD) {
         dbm_init(dbm_target, cdd_clocknum);
-        return cdd_predt_dbm(dbm_target, target, safe);
+        cdd result = cdd_predt_dbm(dbm_target, target, safe);
+        free(dbm_target);
+        return result;
     }
 
     // Split target into DBMs.
     while (!cdd_isterminal(copy.handle()) && cdd_info(copy.handle())->type != TYPE_BDD) {
         extraction_result res = cdd_extract_bdd_and_dbm(copy);
         copy = cdd_reduce(cdd_remove_negative(res.CDD_part));
+        free(dbm_target);
         dbm_target = res.dbm;
         cdd bdd_target = res.BDD_part;
 
         allThatKillsUs |= cdd_predt_dbm(dbm_target, bdd_target, safe);
     }
+    free(dbm_target);
     return allThatKillsUs;
 }
 

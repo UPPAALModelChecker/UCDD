@@ -804,7 +804,20 @@ void test_predt(size_t size)
     REQUIRE((!cdd_past(cdd1) & cdd_predt(cdd1, cdd_false())) == cdd_false());
     REQUIRE(cdd_equiv(cdd_predt(cdd1, cdd_true()), cdd_false()));
 
-    // TODO: how to check cdd_predt when the safe cdd is a random cdd as well?
+    // Check timed predecessor for random, but non-overlapping safe cdd.
+    if (size == 0)
+        return;
+    cdd b1 = cdd_bddvarpp(bdd_start_level);
+    cdd cdd2_part;
+    for (uint32_t i = 0; i < n_dbms; i++) {
+        dbm.generate();
+        cdd_part |= cdd(dbm.raw(), dbm.size());
+    }
+
+    cdd left = cdd_part & b1;
+    cdd right = cdd2_part & !b1;
+    cdd test = left | right;
+    REQUIRE(cdd_equiv(cdd_predt(test, right), cdd_remove_negative(cdd_past(left))));
 }
 
 static void test(const char* name, TestFunction f, size_t size)
@@ -871,6 +884,55 @@ TEST_CASE("CDD intersection with size 3")
     cdd_add_bddvar(3);
     test_intersection(3);
     cdd_done();
+}
+
+TEST_CASE("CDD timed predecessor static test")
+{
+    cdd_init(100000, 10000, 10000);
+    cdd_add_clocks(4);
+    cdd_add_bddvar(3);
+
+    cdd b6 = cdd_bddvarpp(bdd_start_level + 0);
+    cdd b7 = cdd_bddvarpp(bdd_start_level + 1);
+    cdd b8 = cdd_bddvarpp(bdd_start_level + 2);
+
+    // Create input cdd.
+    cdd input = cdd_intervalpp(1, 0, 6, 10);
+    input &= cdd_intervalpp(2, 0, 5, dbm_LS_INFINITY);
+    input &= cdd_intervalpp(3, 0, 8, dbm_LS_INFINITY);
+    input &= b6;
+    cdd_reduce(input);
+
+    // Create safe cdd, which will be safe1 | safe2.
+    cdd safe1 = cdd_intervalpp(1, 0, 0, 4);
+    safe1 &= cdd_intervalpp(2, 0, 0, dbm_LS_INFINITY);
+    safe1 &= cdd_intervalpp(3, 0, 0, dbm_LS_INFINITY);
+    safe1 &= b7;
+
+    cdd safe2 = cdd_intervalpp(1, 0, 7, 9);
+    safe2 &= cdd_intervalpp(2, 0, 0, 4);
+    safe2 &= cdd_intervalpp(3, 0, 0, 3);
+    safe2 &= b8;
+    cdd safe = safe1 | safe2;
+    cdd_reduce(safe);
+
+    // Perform the timed predecessor operator and remove any negative clock values.
+    cdd result = cdd_remove_negative(cdd_predt(input, safe));
+
+    // Create the expected cdd.
+    cdd expected1 = cdd_intervalpp(1, 0, 0, 4);
+    expected1 &= cdd_intervalpp(2, 1, -5, dbm_LS_INFINITY);
+    expected1 &= cdd_intervalpp(3, 1, -1, dbm_LS_INFINITY);
+    expected1 &= b6;
+    expected1 &= !b7;
+    cdd expected2 = cdd_intervalpp(1, 0, 4, 10);
+    expected2 &= cdd_intervalpp(2, 1, -5, dbm_LS_INFINITY);
+    expected2 &= cdd_intervalpp(3, 1, -1, dbm_LS_INFINITY);
+    expected2 &= b6;
+    cdd expected = cdd_remove_negative(expected1 | expected2);
+
+    // Check whether the result matches the expected one.
+    REQUIRE(cdd_equiv(result, expected));
 }
 
 // TODO: the bellow test case passes only on 32-bit, need to fix it

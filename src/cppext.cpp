@@ -13,7 +13,7 @@
 #include "dbm/print.h"
 #include "cdd/kernel.h"
 
-#define ADBM(NAME) raw_t* NAME = allocDBM(size)
+#define ADBM(NAME) raw_t* NAME = allocDBM(cdd_clocknum)
 
 /* Allocate a DBM. */
 static raw_t* allocDBM(uint32_t dim) { return (raw_t*)malloc(dim * dim * sizeof(raw_t)); }
@@ -71,10 +71,9 @@ cdd cdd::operator=(ddNode* node)
  */
 extraction_result cdd_extract_bdd_and_dbm(const cdd& state)
 {
-    uint32_t size = cdd_clocknum;
     ADBM(dbm);
-    cdd bdd_part = cdd_extract_bdd(state, size);
-    cdd cdd_part = cdd_extract_dbm(state, dbm, size);
+    cdd bdd_part = cdd_extract_bdd(state, cdd_clocknum);
+    cdd cdd_part = cdd_extract_dbm(state, dbm, cdd_clocknum);
     extraction_result res;
     res.BDD_part = bdd_part;
     res.CDD_part = cdd_part;
@@ -101,17 +100,16 @@ cdd cdd_delay(const cdd& state)
     if (cdd_info(state.handle())->type == TYPE_BDD)
         return state;
 
-    uint32_t size = cdd_clocknum;
     cdd copy = state;
     cdd res = cdd_false();
     ADBM(dbm);
     while (!cdd_isterminal(copy.handle()) && cdd_info(copy.handle())->type != TYPE_BDD) {
         copy = cdd_reduce(copy);
-        cdd bottom = cdd_extract_bdd(copy, size);
-        copy = cdd_extract_dbm(copy, dbm, size);
+        cdd bottom = cdd_extract_bdd(copy, cdd_clocknum);
+        copy = cdd_extract_dbm(copy, dbm, cdd_clocknum);
         copy = cdd_reduce(cdd_remove_negative(copy));
-        dbm_up(dbm, size);
-        cdd fixed_cdd = cdd(dbm, size);
+        dbm_up(dbm, cdd_clocknum);
+        cdd fixed_cdd = cdd(dbm, cdd_clocknum);
         fixed_cdd &= bottom;
         res |= fixed_cdd;
     }
@@ -126,10 +124,9 @@ cdd cdd_delay(const cdd& state)
 cdd cdd_from_fed(const dbm::fed_t& fed)
 {
     dbm::fed_t copy = dbm::fed_t(fed);
-    uint32_t size = cdd_clocknum;
     cdd res = cdd_false();
     for (auto& zone : fed) {
-        res |= cdd(zone.const_dbm(), size);
+        res |= cdd(zone.const_dbm(), cdd_clocknum);
     }
     return res;
 }
@@ -147,7 +144,6 @@ cdd cdd_from_fed(const dbm::fed_t& fed)
  */
 cdd cdd_predt_dbm(raw_t* dbm_target, cdd bdd_target, const cdd& safe)
 {
-    uint32_t size = cdd_clocknum;
     cdd result = cdd_false();
 
     // Check whether the safe has an overlapping BDD part with the target.
@@ -185,14 +181,14 @@ cdd cdd_predt_dbm(raw_t* dbm_target, cdd bdd_target, const cdd& safe)
                     good_copy = cdd_reduce(cdd_remove_negative(res_good.CDD_part));
                     dbm_good = res_good.dbm;
                     cdd bdd_good = res_good.BDD_part;
-                    good_fed.add(dbm_good, size);
+                    good_fed.add(dbm_good, cdd_clocknum);
                 }
 
                 // If good_fed is empty, good_copy did not contain any DBM. This has the interpretation
                 // of an unbounded DBM.
                 if (good_fed.isEmpty()) {
-                    dbm_init(dbm_good, size);
-                    good_fed.add(dbm_good, size);
+                    dbm_init(dbm_good, cdd_clocknum);
+                    good_fed.add(dbm_good, cdd_clocknum);
                 }
 
                 dbm::fed_t pred_fed = bad_fed.predt(good_fed);
@@ -202,9 +198,9 @@ cdd cdd_predt_dbm(raw_t* dbm_target, cdd bdd_target, const cdd& safe)
                 // For all boolean valuations we did not reach with our safe CDD, we take the past of the
                 // current target DBM.
                 ADBM(local);
-                dbm_copy(local, dbm_target, size);
-                dbm_down(local, size);
-                cdd past = cdd(local, size) & all_booleans;
+                dbm_copy(local, dbm_target, cdd_clocknum);
+                dbm_down(local, cdd_clocknum);
+                cdd past = cdd(local, cdd_clocknum) & all_booleans;
                 result |= past;
             }
         }
@@ -212,8 +208,8 @@ cdd cdd_predt_dbm(raw_t* dbm_target, cdd bdd_target, const cdd& safe)
     } else {
         // Safe does not have an overlapping part with the target BDD.
         // So the complete past of this DBM is bad.
-        dbm_down(dbm_target, size);
-        cdd past = cdd(dbm_target, size) & bdd_target;
+        dbm_down(dbm_target, cdd_clocknum);
+        cdd past = cdd(dbm_target, cdd_clocknum) & bdd_target;
         result |= past;
     }
 
@@ -239,12 +235,11 @@ cdd cdd_predt(const cdd& target, const cdd& safe)
         return cdd_false();
 
     cdd allThatKillsUs = cdd_false();
-    uint32_t size = cdd_clocknum;
     cdd copy = target;
     ADBM(dbm_target);
 
     if (cdd_isterminal(target.handle()) || cdd_info(target.handle())->type == TYPE_BDD) {
-        dbm_init(dbm_target, size);
+        dbm_init(dbm_target, cdd_clocknum);
         return cdd_predt_dbm(dbm_target, target, safe);
     }
 
@@ -294,17 +289,16 @@ cdd cdd_past(const cdd& state)
     if (cdd_info(state.handle())->type == TYPE_BDD)
         return state;
 
-    uint32_t size = cdd_clocknum;
     cdd copy = state;
     cdd res = cdd_false();
     ADBM(dbm);
     while (!cdd_isterminal(copy.handle()) && cdd_info(copy.handle())->type != TYPE_BDD) {
         copy = cdd_reduce(copy);
-        cdd bottom = cdd_extract_bdd(copy, size);
-        copy = cdd_extract_dbm(copy, dbm, size);
+        cdd bottom = cdd_extract_bdd(copy, cdd_clocknum);
+        copy = cdd_extract_dbm(copy, dbm, cdd_clocknum);
         copy = cdd_reduce(cdd_remove_negative(copy));
-        dbm_down(dbm, size);
-        res |= (cdd(dbm, size) & bottom);
+        dbm_down(dbm, cdd_clocknum);
+        res |= (cdd(dbm, cdd_clocknum) & bottom);
     }
     return res;
 }

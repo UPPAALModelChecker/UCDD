@@ -14,7 +14,7 @@
 #include <dbm/fed.h>
 #include <dbm/print.h>
 
-#define ADBM(NAME) raw_t* NAME = allocDBM(cdd_clocknum)
+#define ADBM(NAME, DIM) raw_t* NAME = allocDBM(DIM)
 
 /* Allocate a DBM. */
 static raw_t* allocDBM(uint32_t dim) { return (raw_t*)malloc(dim * dim * sizeof(raw_t)); }
@@ -72,7 +72,7 @@ cdd cdd::operator=(ddNode* node)
  */
 extraction_result cdd_extract_bdd_and_dbm(const cdd& state)
 {
-    ADBM(dbm);
+    ADBM(dbm, cdd_clocknum);
     cdd bdd_part = cdd_extract_bdd(state, cdd_clocknum);
     cdd cdd_part = cdd_extract_dbm(state, dbm, cdd_clocknum);
     extraction_result res;
@@ -103,7 +103,7 @@ cdd cdd_delay(const cdd& state)
 
     cdd copy = state;
     cdd res = cdd_false();
-    ADBM(dbm);
+    ADBM(dbm, cdd_clocknum);
     while (!cdd_isterminal(copy.handle()) && cdd_info(copy.handle())->type != TYPE_BDD) {
         copy = cdd_reduce(copy);
         cdd bottom = cdd_extract_bdd(copy, cdd_clocknum);
@@ -171,12 +171,12 @@ cdd cdd_predt_dbm(raw_t* dbm_target, cdd bdd_target, const cdd& safe)
             // Paranoia check.
             assert(!cdd_eval_false(all_booleans & bdd_target));
 
-            dbm::fed_t bad_fed(dbm_target, cdd_clocknum);
-            ADBM(dbm_good);
+            auto bad_fed = dbm::fed_t{dbm_target, (uint32_t)cdd_clocknum};
+            ADBM(dbm_good, cdd_clocknum);
             cdd good_copy = good_part_with_fitting_bools & all_booleans;
 
             if (!cdd_eval_false(good_copy)) {
-                dbm::fed_t good_fed(cdd_clocknum);
+                auto good_fed = dbm::fed_t{(uint32_t)cdd_clocknum};
                 while (!cdd_isterminal(good_copy.handle()) && cdd_info(good_copy.handle())->type != TYPE_BDD) {
                     extraction_result res_good = cdd_extract_bdd_and_dbm(good_copy);
                     good_copy = cdd_reduce(cdd_remove_negative(res_good.CDD_part));
@@ -192,13 +192,13 @@ cdd cdd_predt_dbm(raw_t* dbm_target, cdd bdd_target, const cdd& safe)
                     good_fed.add(dbm_good, cdd_clocknum);
                 }
 
-                dbm::fed_t pred_fed = bad_fed.predt(good_fed);
+                auto pred_fed = bad_fed.predt(good_fed);
                 result |= cdd_from_fed(pred_fed) & all_booleans;
 
             } else {
                 // For all boolean valuations we did not reach with our safe CDD, we take the past of the
                 // current target DBM.
-                ADBM(local);
+                ADBM(local, cdd_clocknum);
                 dbm_copy(local, dbm_target, cdd_clocknum);
                 dbm_down(local, cdd_clocknum);
                 cdd past = cdd(local, cdd_clocknum) & all_booleans;
@@ -237,7 +237,7 @@ cdd cdd_predt(const cdd& target, const cdd& safe)
 
     cdd allThatKillsUs = cdd_false();
     cdd copy = target;
-    ADBM(dbm_target);
+    ADBM(dbm_target, cdd_clocknum);
 
     if (cdd_isterminal(target.handle()) || cdd_info(target.handle())->type == TYPE_BDD) {
         dbm_init(dbm_target, cdd_clocknum);
@@ -292,7 +292,7 @@ cdd cdd_past(const cdd& state)
 
     cdd copy = state;
     cdd res = cdd_false();
-    ADBM(dbm);
+    ADBM(dbm, cdd_clocknum);
     while (!cdd_isterminal(copy.handle()) && cdd_info(copy.handle())->type != TYPE_BDD) {
         copy = cdd_reduce(copy);
         cdd bottom = cdd_extract_bdd(copy, cdd_clocknum);
@@ -325,7 +325,7 @@ cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_valu
 
     // Apply bool resets.
     if (num_bool_resets > 0)
-        copy = cdd_exist(copy, bool_resets, NULL, num_bool_resets, 0);
+        copy = cdd_exist(copy, bool_resets, nullptr, num_bool_resets, 0);
 
     for (int i = 0; i < num_bool_resets; i++) {
         if (bool_values[i] == 1) {
@@ -414,7 +414,7 @@ cdd cdd_transition_back(const cdd& state, const cdd& guard, const cdd& update, i
 
     // Apply bool resets.
     if (num_bool_resets > 0)
-        copy = cdd_exist(copy, bool_resets, NULL, num_bool_resets, 0);
+        copy = cdd_exist(copy, bool_resets, nullptr, num_bool_resets, 0);
 
     // Special cases when we are already done.
     if (num_clock_resets == 0)

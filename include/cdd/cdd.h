@@ -572,7 +572,7 @@ extern ddNode* cdd_reduce2(ddNode*);
  * @param dbm a dbm
  * @return true if \a dbm is included in \a cdd
  */
-extern int32_t cdd_contains(ddNode* cdd, raw_t* dbm, int32_t dim);
+extern int32_t cdd_contains(ddNode* cdd, raw_t* dbm, uint32_t dim);
 
 /**
  * Convert a DBM to a CDD. It is important that the indexes of the DBM
@@ -580,7 +580,7 @@ extern int32_t cdd_contains(ddNode* cdd, raw_t* dbm, int32_t dim);
  * @param dbm a dbm
  * @return a CDD equivalent to \a dbm
  */
-extern ddNode* cdd_from_dbm(const raw_t* dbm, int32_t dim);
+extern ddNode* cdd_from_dbm(const raw_t* dbm, uint32_t dim);
 
 /**
  * Extract a zone from a CDD.  This function will extract a zone from
@@ -591,7 +591,7 @@ extern ddNode* cdd_from_dbm(const raw_t* dbm, int32_t dim);
  * @param dbm a dbm
  * @return the difference between \a cdd and \a dbm
  */
-extern ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t dim);
+extern ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, uint32_t dim);
 
 /**
  * Extract a BDD from the bottom of a given CDD.
@@ -600,7 +600,7 @@ extern ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t dim);
  * @param dbm a dbm
  * @return the difference between \a cdd and \a dbm
  */
-extern ddNode* cdd_extract_bdd(ddNode* cdd, int32_t dim);
+extern ddNode* cdd_extract_bdd(ddNode* cdd, uint32_t dim);
 
 /**
  * Print a CDD \a r as a dot input file \a ofile.\n\n
@@ -882,9 +882,9 @@ private:
     friend cdd cdd_transition_back_past(const cdd& state, const cdd& guard, const cdd& update, int32_t* clock_resets,
                                         int32_t num_clock_resets, int32_t* bool_resets, int32_t num_bool_resets);
     friend cdd cdd_reduce2(const cdd&);
-    friend bool cdd_contains(const cdd&, raw_t* dbm, int32_t dim);
-    friend cdd cdd_extract_dbm(const cdd&, raw_t* dbm, int32_t dim);
-    friend cdd cdd_extract_bdd(const cdd&, int32_t dim);
+    friend bool cdd_contains(const cdd&, raw_t* dbm, uint32_t dim);
+    friend cdd cdd_extract_dbm(const cdd&, raw_t* dbm, uint32_t dim);
+    friend cdd cdd_extract_bdd(const cdd&, uint32_t dim);
     friend extraction_result cdd_extract_bdd_and_dbm(const cdd&);
     friend void cdd_fprintdot(FILE* ofile, const cdd&, bool push_negate);
     friend void cdd_printdot(const cdd&, bool push_negate);
@@ -916,7 +916,7 @@ typedef struct extraction_result
  * @param d a dbm
  * @return true if \a dbm is included in \a cdd
  */
-inline bool cdd_contains(const cdd& c, raw_t* dbm, int32_t dim) { return cdd_contains(c.root, dbm, dim); }
+inline bool cdd_contains(const cdd& c, raw_t* dbm, uint32_t dim) { return cdd_contains(c.handle(), dbm, dim); }
 
 /**
  * AND operator. Computes the conjunction of the two operands.
@@ -1086,7 +1086,10 @@ inline cdd cdd_reduce2(const cdd& r) { return cdd(cdd_reduce2(r.root)); }
  * @param dim the dimension of the dbm
  * @return the difference between \a cdd and \a dbm
  */
-inline cdd cdd_extract_dbm(const cdd& r, raw_t* dbm, int32_t dim) { return cdd(cdd_extract_dbm(r.root, dbm, dim)); }
+inline cdd cdd_extract_dbm(const cdd& r, raw_t* dbm, uint32_t dim)
+{
+    return cdd(cdd_extract_dbm(r.handle(), dbm, dim));
+}
 
 /**
  * Extract the bottom BDD of the first DBM in a given CDD.
@@ -1094,7 +1097,7 @@ inline cdd cdd_extract_dbm(const cdd& r, raw_t* dbm, int32_t dim) { return cdd(c
  * @param dim the dimension of the dbm
  * @return the difference between \a cdd and \a dbm
  */
-inline cdd cdd_extract_bdd(const cdd& r, int32_t dim) { return cdd(cdd_extract_bdd(r.root, dim)); }
+inline cdd cdd_extract_bdd(const cdd& r, uint32_t dim) { return cdd(cdd_extract_bdd(r.handle(), dim)); }
 
 /**
  * Print a CDD \a r as a dot input file \a ofile. You can use the dot

@@ -79,7 +79,7 @@ static int32_t opid;
 void cdd2Dot(char* fname, ddNode* node, char* name);
 
 /*=== INTERNAL PROTOTYPES ==============================================*/
-static int32_t cdd_contains_rec(ddNode*, raw_t*, int32_t dim);
+static int32_t cdd_contains_rec(ddNode*, raw_t*, uint32_t dim);
 static ddNode* cdd_apply_rec(ddNode*, ddNode*);
 #ifdef EX
 static ddNode* cdd_exist_rec(ddNode* node, int32_t*, int32_t*, int32_t, int32_t, raw_t*);
@@ -355,13 +355,13 @@ ddNode* cdd_ite(ddNode* f, ddNode* g, ddNode* h)
     return f;
 }
 
-int32_t cdd_contains(ddNode* node, raw_t* dbm, int32_t dim)
+int32_t cdd_contains(ddNode* node, raw_t* dbm, uint32_t dim)
 {
     assert(dbm_isValid(dbm, dim));
     return cdd_contains_rec(node, dbm, dim);
 }
 
-static int32_t cdd_contains_rec(ddNode* node, raw_t* d, int32_t dim)
+static int32_t cdd_contains_rec(ddNode* node, raw_t* d, uint32_t dim)
 {
     raw_t* tmp;
     cdd_iterator it;
@@ -978,19 +978,19 @@ static ddNode* cdd_replace_rec(ddNode* node, int32_t* levels, int32_t* clocks)
     return res;
 }
 #if 1
-ddNode* cdd_from_dbm(const raw_t* dbm, int32_t size)
+ddNode* cdd_from_dbm(const raw_t* dbm, uint32_t dim)
 {
     int32_t i;
     int32_t j;
     int32_t k;
-    uint32_t ok[bits2intsize(size * size)];
+    uint32_t ok[bits2intsize(dim * dim)];
     int32_t lo, hi;
     Elem* top;
     ddNode* c;
     ddNode* tmp;
     LevelInfo* info;
 
-    dbm_analyzeForMinDBM(dbm, size, ok);
+    dbm_analyzeForMinDBM(dbm, dim, ok);
 
     /* Create CDD
      *
@@ -1013,23 +1013,23 @@ ddNode* cdd_from_dbm(const raw_t* dbm, int32_t size)
          * smaller than the number of clocks declared in the CDD
          * package.
          */
-        if (i >= size || j >= size) {
+        if (i >= dim || j >= dim) {
             continue;
         }
 
-        //      lo = ok[j * size + i] && (old_dbm_get_bound(d, j, i) < ZERO || j > 0);
-        //      hi = ok[i * size + j] && (old_dbm_get_bound(d, i, j) < ZERO || i > 0);
+        //      lo = ok[j * dim + i] && (old_dbm_get_bound(d, j, i) < ZERO || j > 0);
+        //      hi = ok[i * dim + j] && (old_dbm_get_bound(d, i, j) < ZERO || i > 0);
 
-        lo = base_getOneBit(ok, j * size + i);
-        hi = base_getOneBit(ok, i * size + j);
+        lo = base_getOneBit(ok, j * dim + i);
+        hi = base_getOneBit(ok, i * dim + j);
 
         if (lo || hi) {
             top = cdd_refstacktop;
             tmp = c;
             if (lo) {
-                cdd_push(cddfalse, bnd_u2l(dbm[j * size + i]));
+                cdd_push(cddfalse, bnd_u2l(dbm[j * dim + i]));
                 if (hi) {
-                    cdd_push(c, dbm[i * size + j]);
+                    cdd_push(c, dbm[i * dim + j]);
                     cdd_push(cddfalse, INF);
                 } else {
                     cdd_push(c, INF);
@@ -1037,7 +1037,7 @@ ddNode* cdd_from_dbm(const raw_t* dbm, int32_t size)
 
                 c = cdd_make_cdd_node(k, top, cdd_refstacktop - top);
             } else {
-                cdd_push(cdd_rglr(c), dbm[i * size + j]);
+                cdd_push(cdd_rglr(c), dbm[i * dim + j]);
                 cdd_push(cdd_neg_cond(cddfalse, cdd_mask(c)), INF);
                 c = cdd_neg_cond(cdd_make_cdd_node(k, top, cdd_refstacktop - top), cdd_mask(c));
             }
@@ -1123,18 +1123,18 @@ ddNode* cdd_remove_negative(ddNode* cdd)
     return result;
 }
 
-ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t size)
+ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, uint32_t dim)
 {
     cdd_iterator it;
     LevelInfo* info;
     ddNode *node, *zone, *result;
-    uint32_t touched[bits2intsize(size)];
+    uint32_t touched[bits2intsize(dim)];
 
     node = cdd;
 
-    dbm_init(dbm, size);
+    dbm_init(dbm, dim);
 
-    base_resetBits(touched, bits2intsize(size));
+    base_resetBits(touched, bits2intsize(dim));
 
     while (!cdd_isterminal(node)) {
         info = cdd_info(node);
@@ -1144,8 +1144,8 @@ ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t size)
         }
         assert(info->type != TYPE_BDD);
 
-        assert(info->clock1 < size);
-        assert(info->clock2 < size);
+        assert(info->clock1 < dim);
+        assert(info->clock2 < dim);
 
         cdd_it_init(it, node);
         if (IS_FALSE(cdd_it_child(it))) {
@@ -1154,17 +1154,17 @@ ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t size)
 
         assert(cdd_it_child(it) != cddfalse);
 
-        dbm_constrain(dbm, size, info->clock2, info->clock1, bnd_l2u(cdd_it_lower(it)), touched);
+        dbm_constrain(dbm, dim, info->clock2, info->clock1, bnd_l2u(cdd_it_lower(it)), touched);
 
-        dbm_constrain(dbm, size, info->clock1, info->clock2, cdd_it_upper(it), touched);
+        dbm_constrain(dbm, dim, info->clock1, info->clock2, cdd_it_upper(it), touched);
 
         node = cdd_it_child(it);
     }
 
-    dbm_closex(dbm, size, touched);
-    assert(dbm_isValid(dbm, size));
+    dbm_closex(dbm, dim, touched);
+    assert(dbm_isValid(dbm, dim));
 
-    zone = cdd_from_dbm(dbm, size);
+    zone = cdd_from_dbm(dbm, dim);
     cdd_ref(zone);
 
     result = cdd_and(cdd, cdd_neg(zone));
@@ -1173,7 +1173,7 @@ ddNode* cdd_extract_dbm(ddNode* cdd, raw_t* dbm, int32_t size)
     return result;
 }
 
-ddNode* cdd_extract_bdd(ddNode* cdd, int32_t size)
+ddNode* cdd_extract_bdd(ddNode* cdd, uint32_t dim)
 {
     cdd_iterator it;
     LevelInfo* info;
@@ -1188,8 +1188,8 @@ ddNode* cdd_extract_bdd(ddNode* cdd, int32_t size)
         }
         assert(info->type != TYPE_BDD);
 
-        assert(info->clock1 < size);
-        assert(info->clock2 < size);
+        assert(info->clock1 < dim);
+        assert(info->clock2 < dim);
 
         cdd_it_init(it, node);
         if (IS_FALSE(cdd_it_child(it))) {

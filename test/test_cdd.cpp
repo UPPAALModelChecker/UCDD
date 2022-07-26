@@ -25,9 +25,10 @@
 #include <doctest/doctest.h>
 
 #include <iostream>
-#include <random>
 #include <cstdio>
 #include <cstdlib>
+
+#include <dbm/print.h>
 
 using std::endl;
 using std::cerr;
@@ -39,7 +40,7 @@ static auto rg = RandomGenerator{};  // shared instance of random generator
 /** Random helper functions. */
 static int uniform(uint32_t a, uint32_t b) { return rg.uni(a, b); }
 
-static bool random_bool() { return rg.uni(0, 1); }
+static bool binomial() { return rg.uni(0, 1); }
 
 #define RANGE() (uniform(1, 10000))
 
@@ -110,9 +111,9 @@ static cdd generate_bdd(size_t size)
     cdd bdd_part = cdd_true();
     for (uint32_t i = 0; i < size; i++) {
         cdd bdd_node = cdd_bddvarpp(bdd_start_level + i);
-        if (random_bool())
+        if (binomial())
             bdd_node = !bdd_node;
-        if (random_bool()) {
+        if (binomial()) {
             bdd_part &= bdd_node;
         } else {
             bdd_part |= bdd_node;
@@ -132,7 +133,11 @@ static void test_conversion(size_t size)
     auto cdd1 = cdd{dbm1.raw(), dbm1.size()};
 
     // Check conversion
-    REQUIRE(cdd_contains(cdd1, dbm1.raw(), dbm1.size()));  // dbm_print(stdout, dbm1, size);
+    auto conv = cdd_contains(cdd1, dbm1.raw(), dbm1.size());
+    if (!conv) {
+        dbm_print(stdout, dbm1.raw(), size);
+    }
+    REQUIRE(conv);
 
     // Convert to DBM
     auto cdd2 = cdd{cdd_extract_dbm(cdd1, dbm2.raw(), size)};
@@ -467,8 +472,8 @@ void test_past(size_t size)
 void test_exist(size_t size)
 {
     // First some trivial cases.
-    REQUIRE(cdd_exist(cdd_true(), NULL, NULL, size, size) == cdd_true());
-    REQUIRE(cdd_exist(cdd_false(), NULL, NULL, size, size) == cdd_false());
+    REQUIRE(cdd_exist(cdd_true(), nullptr, nullptr, size, size) == cdd_true());
+    REQUIRE(cdd_exist(cdd_false(), nullptr, nullptr, size, size) == cdd_false());
 
     // Create a CDD containing random DBMs.
     cdd cdd_part;
@@ -506,14 +511,14 @@ void test_exist(size_t size)
     REQUIRE(cdd_equiv(result1, result2));
 
     // The order of existential quantification should not matter
-    cdd result3 = cdd_exist(result, boolPtr, NULL, num_bools, 0);
+    cdd result3 = cdd_exist(result, boolPtr, nullptr, num_bools, 0);
     result3 = cdd_reduce(result3);
-    cdd result4 = cdd_exist(result3, NULL, clockPtr, 0, num_clocks);
+    cdd result4 = cdd_exist(result3, nullptr, clockPtr, 0, num_clocks);
     result4 = cdd_reduce(result4);
 
-    cdd result5 = cdd_exist(result, NULL, clockPtr, 0, num_clocks);
+    cdd result5 = cdd_exist(result, nullptr, clockPtr, 0, num_clocks);
     result5 = cdd_reduce(result5);
-    cdd result6 = cdd_exist(result5, boolPtr, NULL, num_bools, 0);
+    cdd result6 = cdd_exist(result5, boolPtr, nullptr, num_bools, 0);
     result6 = cdd_reduce(result6);
 
     REQUIRE(cdd_equiv(result1, result4));
@@ -524,8 +529,10 @@ void test_exist(size_t size)
 void test_apply_reset(size_t size)
 {
     // First some trivial cases.
-    REQUIRE(cdd_equiv(cdd_apply_reset(cdd_true(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd_true())));
-    REQUIRE(cdd_equiv(cdd_apply_reset(cdd_false(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd_false())));
+    REQUIRE(cdd_equiv(cdd_apply_reset(cdd_true(), nullptr, nullptr, 0, nullptr, nullptr, 0),
+                      cdd_remove_negative(cdd_true())));
+    REQUIRE(cdd_equiv(cdd_apply_reset(cdd_false(), nullptr, nullptr, 0, nullptr, nullptr, 0),
+                      cdd_remove_negative(cdd_false())));
 
     // Create a CDD containing random DBMs.
     cdd cdd_part;
@@ -542,9 +549,11 @@ void test_apply_reset(size_t size)
     cdd cdd1 = cdd_part & bdd_part;
 
     // Resetting nothing should not change the CDDs.
-    REQUIRE(cdd_equiv(cdd_apply_reset(cdd_part, NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd_part)));
-    REQUIRE(cdd_equiv(cdd_apply_reset(bdd_part, NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(bdd_part)));
-    REQUIRE(cdd_equiv(cdd_apply_reset(cdd1, NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd1)));
+    REQUIRE(
+        cdd_equiv(cdd_apply_reset(cdd_part, nullptr, nullptr, 0, nullptr, nullptr, 0), cdd_remove_negative(cdd_part)));
+    REQUIRE(
+        cdd_equiv(cdd_apply_reset(bdd_part, nullptr, nullptr, 0, nullptr, nullptr, 0), cdd_remove_negative(bdd_part)));
+    REQUIRE(cdd_equiv(cdd_apply_reset(cdd1, nullptr, nullptr, 0, nullptr, nullptr, 0), cdd_remove_negative(cdd1)));
 
     // The rest of the test only applies when there are 2 or more clocks.
     if (size <= 1)
@@ -578,11 +587,11 @@ void test_apply_reset(size_t size)
 void test_transition(size_t size)
 {
     // First some trivial cases.
-    REQUIRE(cdd_equiv(cdd_transition(cdd_true(), cdd_true(), NULL, NULL, 0, NULL, NULL, 0),
+    REQUIRE(cdd_equiv(cdd_transition(cdd_true(), cdd_true(), nullptr, nullptr, 0, nullptr, nullptr, 0),
                       cdd_remove_negative(cdd_true())));
-    REQUIRE(cdd_equiv(cdd_transition(cdd_true(), cdd_false(), NULL, NULL, 0, NULL, NULL, 0),
+    REQUIRE(cdd_equiv(cdd_transition(cdd_true(), cdd_false(), nullptr, nullptr, 0, nullptr, nullptr, 0),
                       cdd_remove_negative(cdd_false())));
-    REQUIRE(cdd_equiv(cdd_transition(cdd_false(), cdd_true(), NULL, NULL, 0, NULL, NULL, 0),
+    REQUIRE(cdd_equiv(cdd_transition(cdd_false(), cdd_true(), nullptr, nullptr, 0, nullptr, nullptr, 0),
                       cdd_remove_negative(cdd_false())));
 
     // Create a CDD containing random DBMs.
@@ -600,11 +609,12 @@ void test_transition(size_t size)
     cdd cdd1 = cdd_part & bdd_part;
 
     // Taking a transition with true guard and no update should not alter the state.
-    REQUIRE(
-        cdd_equiv(cdd_transition(cdd_part, cdd_true(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd_part)));
-    REQUIRE(
-        cdd_equiv(cdd_transition(bdd_part, cdd_true(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(bdd_part)));
-    REQUIRE(cdd_equiv(cdd_transition(cdd1, cdd_true(), NULL, NULL, 0, NULL, NULL, 0), cdd_remove_negative(cdd1)));
+    REQUIRE(cdd_equiv(cdd_transition(cdd_part, cdd_true(), nullptr, nullptr, 0, nullptr, nullptr, 0),
+                      cdd_remove_negative(cdd_part)));
+    REQUIRE(cdd_equiv(cdd_transition(bdd_part, cdd_true(), nullptr, nullptr, 0, nullptr, nullptr, 0),
+                      cdd_remove_negative(bdd_part)));
+    REQUIRE(cdd_equiv(cdd_transition(cdd1, cdd_true(), nullptr, nullptr, 0, nullptr, nullptr, 0),
+                      cdd_remove_negative(cdd1)));
 
     // The rest of the test only applies when there are 2 or more clocks.
     if (size <= 1)
@@ -645,9 +655,9 @@ void test_transition(size_t size)
 void test_transition_back(size_t size)
 {
     // First some trivial cases.
-    REQUIRE(cdd_equiv(cdd_transition_back(cdd_true(), cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_true()));
-    REQUIRE(cdd_equiv(cdd_transition_back(cdd_true(), cdd_false(), cdd_true(), NULL, 0, NULL, 0), cdd_false()));
-    REQUIRE(cdd_equiv(cdd_transition_back(cdd_false(), cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_false()));
+    REQUIRE(cdd_equiv(cdd_transition_back(cdd_true(), cdd_true(), cdd_true(), nullptr, 0, nullptr, 0), cdd_true()));
+    REQUIRE(cdd_equiv(cdd_transition_back(cdd_true(), cdd_false(), cdd_true(), nullptr, 0, nullptr, 0), cdd_false()));
+    REQUIRE(cdd_equiv(cdd_transition_back(cdd_false(), cdd_true(), cdd_true(), nullptr, 0, nullptr, 0), cdd_false()));
 
     // Create a CDD containing random DBMs.
     cdd cdd_part;
@@ -664,9 +674,9 @@ void test_transition_back(size_t size)
     cdd cdd1 = cdd_part & bdd_part;
 
     // Taking a transition with true guard and no update should not alter the state.
-    REQUIRE(cdd_equiv(cdd_transition_back(cdd_part, cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_part));
-    REQUIRE(cdd_equiv(cdd_transition_back(bdd_part, cdd_true(), cdd_true(), NULL, 0, NULL, 0), bdd_part));
-    REQUIRE(cdd_equiv(cdd_transition_back(cdd1, cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd1));
+    REQUIRE(cdd_equiv(cdd_transition_back(cdd_part, cdd_true(), cdd_true(), nullptr, 0, nullptr, 0), cdd_part));
+    REQUIRE(cdd_equiv(cdd_transition_back(bdd_part, cdd_true(), cdd_true(), nullptr, 0, nullptr, 0), bdd_part));
+    REQUIRE(cdd_equiv(cdd_transition_back(cdd1, cdd_true(), cdd_true(), nullptr, 0, nullptr, 0), cdd1));
 
     // The rest of the test only applies when there are 2 or more clocks.
     if (size <= 1)
@@ -705,9 +715,12 @@ void test_transition_back(size_t size)
 void test_transition_back_past(size_t size)
 {
     // First some trivial cases.
-    REQUIRE(cdd_equiv(cdd_transition_back_past(cdd_true(), cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_true()));
-    REQUIRE(cdd_equiv(cdd_transition_back_past(cdd_true(), cdd_false(), cdd_true(), NULL, 0, NULL, 0), cdd_false()));
-    REQUIRE(cdd_equiv(cdd_transition_back_past(cdd_false(), cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_false()));
+    REQUIRE(
+        cdd_equiv(cdd_transition_back_past(cdd_true(), cdd_true(), cdd_true(), nullptr, 0, nullptr, 0), cdd_true()));
+    REQUIRE(
+        cdd_equiv(cdd_transition_back_past(cdd_true(), cdd_false(), cdd_true(), nullptr, 0, nullptr, 0), cdd_false()));
+    REQUIRE(
+        cdd_equiv(cdd_transition_back_past(cdd_false(), cdd_true(), cdd_true(), nullptr, 0, nullptr, 0), cdd_false()));
 
     // Create a CDD containing random DBMs.
     cdd cdd_part;
@@ -725,11 +738,11 @@ void test_transition_back_past(size_t size)
 
     // Taking a transition with true guard and no update should not alter the state. So only the past delay operator is
     // applied.
-    REQUIRE(
-        cdd_equiv(cdd_transition_back_past(cdd_part, cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_past(cdd_part)));
-    REQUIRE(
-        cdd_equiv(cdd_transition_back_past(bdd_part, cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_past(bdd_part)));
-    REQUIRE(cdd_equiv(cdd_transition_back_past(cdd1, cdd_true(), cdd_true(), NULL, 0, NULL, 0), cdd_past(cdd1)));
+    REQUIRE(cdd_equiv(cdd_transition_back_past(cdd_part, cdd_true(), cdd_true(), nullptr, 0, nullptr, 0),
+                      cdd_past(cdd_part)));
+    REQUIRE(cdd_equiv(cdd_transition_back_past(bdd_part, cdd_true(), cdd_true(), nullptr, 0, nullptr, 0),
+                      cdd_past(bdd_part)));
+    REQUIRE(cdd_equiv(cdd_transition_back_past(cdd1, cdd_true(), cdd_true(), nullptr, 0, nullptr, 0), cdd_past(cdd1)));
 
     // The rest of the test only applies when there are 2 or more clocks.
     if (size <= 1)

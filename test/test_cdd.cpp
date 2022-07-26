@@ -830,19 +830,24 @@ void test_predt(size_t size)
 void test_bdd_to_array(size_t size)
 {
     // First some trivial cases.
-    bdd_arrays result = cdd_bdd_to_array(cdd_true(), cdd_varnum);
+    bdd_arrays result = cdd_bdd_to_array(cdd_true());
     REQUIRE(result.numBools == cdd_varnum);
     REQUIRE(result.numTraces == 0);
+    delete[] result.vars;
+    delete[] result.values;
 
     // Create a random BDD.
     cdd bdd_part = generate_bdd(size);
 
-    bdd_arrays result1 = cdd_bdd_to_array(bdd_part, cdd_varnum);
+    bdd_arrays result1 = cdd_bdd_to_array(bdd_part);
     if (cdd_isterminal(bdd_part.handle())) {
         REQUIRE(result1.numTraces == 0);
     } else {
         REQUIRE(result1.numTraces > 0);
     }
+
+    delete[] result1.vars;
+    delete[] result1.values;
 }
 
 static void test(const char* name, TestFunction f, size_t size)

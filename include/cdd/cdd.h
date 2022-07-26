@@ -871,7 +871,7 @@ private:
     friend bool cdd_equiv(const cdd&, const cdd&);
     friend cdd cdd_delay(const cdd&);
     friend cdd cdd_past(const cdd&);
-    friend bdd_arrays cdd_bdd_to_array(const cdd&, int32_t);
+    friend bdd_arrays cdd_bdd_to_array(const cdd&);
     friend cdd cdd_delay_invariant(const cdd&, const cdd&);
     friend cdd cdd_apply_reset(const cdd& state, int32_t* clock_resets, int32_t* clock_values, int32_t num_clock_resets,
                                int32_t* bool_resets, int32_t* bool_values, int32_t num_bool_resets);

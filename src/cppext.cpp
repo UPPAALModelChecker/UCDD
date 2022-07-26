@@ -325,7 +325,7 @@ public:
      * @param num_cols the fixed number of columns.
      * @param initial_value the initial value for each element of the matrix.
      */
-    dynamic_two_dim_matrix(int init_num_rows, int num_cols, int32_t initial_value)
+    dynamic_two_dim_matrix(uint32_t init_num_rows, int num_cols, int32_t initial_value)
     {
         assert(init_num_rows > 0);
         assert(num_cols > 0);
@@ -410,7 +410,7 @@ public:
      */
     int32_t* get_array()
     {
-        int32_t* array = new int32_t[num_cols * (current_row + 1)];
+        auto* array = new int32_t[num_cols * (current_row + 1)];
 
         for (int i = 0; i <= current_row; i++) {
             for (int j = 0; j < num_cols; j++) {
@@ -436,6 +436,7 @@ public:
             delete[] matrix[i];
         }
         delete[] matrix;
+        delete[] rows_to_be_ignored;
     }
 
 private:
@@ -452,7 +453,7 @@ private:
      */
     int32_t* initialized_array()
     {
-        int32_t* array = new int32_t[num_cols];
+        auto* array = new int32_t[num_cols];
         for (int j = 0; j < num_cols; j++) {
             array[j] = initial_value;
         }
@@ -464,8 +465,8 @@ private:
      */
     void resize()
     {
-        int32_t** new_matrix = new int32_t*[num_rows * 2];
-        bool* new_rows_to_be_ignored = new bool[num_rows * 2];
+        auto** new_matrix = new int32_t*[num_rows * 2];
+        auto* new_rows_to_be_ignored = new bool[num_rows * 2];
 
         // Copy old rows into new matrix.
         for (int i = 0; i < num_rows; i++) {
@@ -485,6 +486,8 @@ private:
         matrix = new_matrix;
         rows_to_be_ignored = new_rows_to_be_ignored;
         num_rows = 2 * num_rows;
+        delete[] new_matrix;
+        delete[] new_rows_to_be_ignored;
     }
 };
 
@@ -554,17 +557,15 @@ void cdd_bdd_to_matrix_rec(ddNode* r, dynamic_two_dim_matrix* varsMatrix, dynami
  * <p></p>
  *
  * @param state a cdd containing only BDD or terminal nodes
- * @param num_bools the number of boolean variables
  * @return an array representation of the BDD.
  */
-bdd_arrays cdd_bdd_to_array(const cdd& state, int num_bools)
+bdd_arrays cdd_bdd_to_array(const cdd& state)
 {
-    // TODO can num_bools safely removed? I.e., is num_bools always the same as cdd_varnum in kernel.h?
-    int init_num_of_traces = std::min(2 << num_bools, 100);  // 2<<num_bools <==> 2 ^ num_bools
+    auto init_num_of_traces = std::min(1u << cdd_varnum, 100u);  // 1u<<cdd_varnum <==> 2 ^ cdd_varnum
     int32_t initial_value = -1;
 
-    dynamic_two_dim_matrix* varsMatrix = new dynamic_two_dim_matrix(init_num_of_traces, num_bools, initial_value);
-    dynamic_two_dim_matrix* valuesMatrix = new dynamic_two_dim_matrix(init_num_of_traces, num_bools, initial_value);
+    auto* varsMatrix = new dynamic_two_dim_matrix(init_num_of_traces, cdd_varnum, initial_value);
+    auto* valuesMatrix = new dynamic_two_dim_matrix(init_num_of_traces, cdd_varnum, initial_value);
 
     // Perform the actual depth-first search.
     cdd_bdd_to_matrix_rec(state.handle(), varsMatrix, valuesMatrix, 0, false);
@@ -578,7 +579,7 @@ bdd_arrays cdd_bdd_to_array(const cdd& state, int num_bools)
     bdd_arrays arrays;
     arrays.vars = varsMatrix->get_array();
     arrays.values = valuesMatrix->get_array();
-    arrays.numBools = num_bools;
+    arrays.numBools = cdd_varnum;
     arrays.numTraces = varsMatrix->get_current_row() + 1;
 
     // Check for the special case when no trace was effectively generated (or all traces ended in
@@ -589,6 +590,8 @@ bdd_arrays cdd_bdd_to_array(const cdd& state, int num_bools)
 
     varsMatrix->clean();
     valuesMatrix->clean();
+    delete varsMatrix;
+    delete valuesMatrix;
     return arrays;
 }
 

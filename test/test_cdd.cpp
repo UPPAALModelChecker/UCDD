@@ -779,6 +779,54 @@ void test_transition_back_past(size_t size)
                                     num_bools)) == cdd_false());
 }
 
+void test_predt(size_t size)
+{
+    // First some trivial cases.
+    REQUIRE(cdd_equiv(cdd_predt(cdd_true(), cdd_true()), cdd_false()));
+    REQUIRE(cdd_equiv(cdd_predt(cdd_true(), cdd_false()), cdd_remove_negative(cdd_true())));
+    REQUIRE(cdd_equiv(cdd_predt(cdd_false(), cdd_true()), cdd_false()));
+    REQUIRE(cdd_equiv(cdd_predt(cdd_false(), cdd_false()), cdd_false()));
+
+    // Create a CDD containing random DBMs.
+    cdd cdd_part;
+    auto dbm = dbm_wrap{size};
+    int n_dbms = 8;
+
+    for (uint32_t i = 0; i < n_dbms; i++) {
+        dbm.generate();
+        cdd_part |= cdd(dbm.raw(), dbm.size());
+    }
+
+    // Create a random BDD.
+    cdd bdd_part = generate_bdd(size);
+    cdd cdd1 = cdd_part & bdd_part;
+
+    // First some checks when nothing can save us.
+    // cdd_part \subset cdd_predt(cdd_part) <==> cdd_part & !cdd_predt(cdd_part) == false
+    REQUIRE((!cdd_predt(cdd_part, cdd_false()) & cdd_remove_negative(cdd_part)) == cdd_false());
+    // cdd_predt(cdd_part) \subset cdd_past(cdd_part) <==> cdd_predt(cdd_part) & !cdd_past(cdd_part) == false
+    REQUIRE((!cdd_past(cdd_part) & cdd_predt(cdd_part, cdd_false())) == cdd_false());
+    REQUIRE(cdd_equiv(cdd_predt(bdd_part, cdd_false()), cdd_remove_negative(bdd_part)));
+    // cdd_predt(cdd1) \subset cdd_past(cdd1) <==> cdd_predt(cdd1) & !cdd_past(cdd1) == false
+    REQUIRE((!cdd_past(cdd1) & cdd_predt(cdd1, cdd_false())) == cdd_false());
+    REQUIRE(cdd_equiv(cdd_predt(cdd1, cdd_true()), cdd_false()));
+
+    // Check timed predecessor for random, but non-overlapping safe cdd.
+    if (size == 0)
+        return;
+    cdd b1 = cdd_bddvarpp(bdd_start_level);
+    cdd cdd2_part;
+    for (uint32_t i = 0; i < n_dbms; i++) {
+        dbm.generate();
+        cdd_part |= cdd(dbm.raw(), dbm.size());
+    }
+
+    cdd left = cdd_part & b1;
+    cdd right = cdd2_part & !b1;
+    cdd test = left | right;
+    REQUIRE(cdd_equiv(cdd_predt(test, right), cdd_remove_negative(cdd_past(left))));
+}
+
 static void test(const char* name, TestFunction f, size_t size)
 {
     cout << name << " size = " << size << endl;
@@ -816,6 +864,7 @@ static void big_test(uint32_t n)
             test("test_transition  ", test_transition, i);
             test("test_transition_back", test_transition_back, i);
             test("test_transition_back_past", test_transition_back_past, i);
+            test("test_predt       ", test_predt, i);
         }
         test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;
@@ -842,6 +891,55 @@ TEST_CASE("CDD intersection with size 3")
     cdd_add_bddvar(3);
     test_intersection(3);
     cdd_done();
+}
+
+TEST_CASE("CDD timed predecessor static test")
+{
+    cdd_init(100000, 10000, 10000);
+    cdd_add_clocks(4);
+    cdd_add_bddvar(3);
+
+    cdd b6 = cdd_bddvarpp(bdd_start_level + 0);
+    cdd b7 = cdd_bddvarpp(bdd_start_level + 1);
+    cdd b8 = cdd_bddvarpp(bdd_start_level + 2);
+
+    // Create input cdd.
+    cdd input = cdd_intervalpp(1, 0, 6, 10);
+    input &= cdd_intervalpp(2, 0, 5, dbm_LS_INFINITY);
+    input &= cdd_intervalpp(3, 0, 8, dbm_LS_INFINITY);
+    input &= b6;
+    cdd_reduce(input);
+
+    // Create safe cdd, which will be safe1 | safe2.
+    cdd safe1 = cdd_intervalpp(1, 0, 0, 4);
+    safe1 &= cdd_intervalpp(2, 0, 0, dbm_LS_INFINITY);
+    safe1 &= cdd_intervalpp(3, 0, 0, dbm_LS_INFINITY);
+    safe1 &= b7;
+
+    cdd safe2 = cdd_intervalpp(1, 0, 7, 9);
+    safe2 &= cdd_intervalpp(2, 0, 0, 4);
+    safe2 &= cdd_intervalpp(3, 0, 0, 3);
+    safe2 &= b8;
+    cdd safe = safe1 | safe2;
+    cdd_reduce(safe);
+
+    // Perform the timed predecessor operator and remove any negative clock values.
+    cdd result = cdd_remove_negative(cdd_predt(input, safe));
+
+    // Create the expected cdd.
+    cdd expected1 = cdd_intervalpp(1, 0, 0, 4);
+    expected1 &= cdd_intervalpp(2, 1, -5, dbm_LS_INFINITY);
+    expected1 &= cdd_intervalpp(3, 1, -1, dbm_LS_INFINITY);
+    expected1 &= b6;
+    expected1 &= !b7;
+    cdd expected2 = cdd_intervalpp(1, 0, 4, 10);
+    expected2 &= cdd_intervalpp(2, 1, -5, dbm_LS_INFINITY);
+    expected2 &= cdd_intervalpp(3, 1, -1, dbm_LS_INFINITY);
+    expected2 &= b6;
+    cdd expected = cdd_remove_negative(expected1 | expected2);
+
+    // Check whether the result matches the expected one.
+    REQUIRE(cdd_equiv(result, expected));
 }
 
 // TODO: the bellow test case passes only on 32-bit, need to fix it

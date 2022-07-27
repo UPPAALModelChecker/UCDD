@@ -899,47 +899,52 @@ TEST_CASE("CDD timed predecessor static test")
     cdd_add_clocks(4);
     cdd_add_bddvar(3);
 
-    cdd b6 = cdd_bddvarpp(bdd_start_level + 0);
-    cdd b7 = cdd_bddvarpp(bdd_start_level + 1);
-    cdd b8 = cdd_bddvarpp(bdd_start_level + 2);
+    // TODO For now, the actual test case has to be in its own name space, otherwise cdd_done() will generate memory
+    //  issues, see issue #36.
+    {
+        cdd b6 = cdd_bddvarpp(bdd_start_level + 0);
+        cdd b7 = cdd_bddvarpp(bdd_start_level + 1);
+        cdd b8 = cdd_bddvarpp(bdd_start_level + 2);
 
-    // Create input cdd.
-    cdd input = cdd_intervalpp(1, 0, 6, 10);
-    input &= cdd_intervalpp(2, 0, 5, dbm_LS_INFINITY);
-    input &= cdd_intervalpp(3, 0, 8, dbm_LS_INFINITY);
-    input &= b6;
-    cdd_reduce(input);
+        // Create input cdd.
+        cdd input = cdd_intervalpp(1, 0, 6, 10);
+        input &= cdd_intervalpp(2, 0, 5, dbm_LS_INFINITY);
+        input &= cdd_intervalpp(3, 0, 8, dbm_LS_INFINITY);
+        input &= b6;
+        cdd_reduce(input);
 
-    // Create safe cdd, which will be safe1 | safe2.
-    cdd safe1 = cdd_intervalpp(1, 0, 0, 4);
-    safe1 &= cdd_intervalpp(2, 0, 0, dbm_LS_INFINITY);
-    safe1 &= cdd_intervalpp(3, 0, 0, dbm_LS_INFINITY);
-    safe1 &= b7;
+        // Create safe cdd, which will be safe1 | safe2.
+        cdd safe1 = cdd_intervalpp(1, 0, 0, 4);
+        safe1 &= cdd_intervalpp(2, 0, 0, dbm_LS_INFINITY);
+        safe1 &= cdd_intervalpp(3, 0, 0, dbm_LS_INFINITY);
+        safe1 &= b7;
 
-    cdd safe2 = cdd_intervalpp(1, 0, 7, 9);
-    safe2 &= cdd_intervalpp(2, 0, 0, 4);
-    safe2 &= cdd_intervalpp(3, 0, 0, 3);
-    safe2 &= b8;
-    cdd safe = safe1 | safe2;
-    cdd_reduce(safe);
+        cdd safe2 = cdd_intervalpp(1, 0, 7, 9);
+        safe2 &= cdd_intervalpp(2, 0, 0, 4);
+        safe2 &= cdd_intervalpp(3, 0, 0, 3);
+        safe2 &= b8;
+        cdd safe = safe1 | safe2;
+        cdd_reduce(safe);
 
-    // Perform the timed predecessor operator and remove any negative clock values.
-    cdd result = cdd_remove_negative(cdd_predt(input, safe));
+        // Perform the timed predecessor operator and remove any negative clock values.
+        cdd result = cdd_remove_negative(cdd_predt(input, safe));
 
-    // Create the expected cdd.
-    cdd expected1 = cdd_intervalpp(1, 0, 0, 4);
-    expected1 &= cdd_intervalpp(2, 1, -5, dbm_LS_INFINITY);
-    expected1 &= cdd_intervalpp(3, 1, -1, dbm_LS_INFINITY);
-    expected1 &= b6;
-    expected1 &= !b7;
-    cdd expected2 = cdd_intervalpp(1, 0, 4, 10);
-    expected2 &= cdd_intervalpp(2, 1, -5, dbm_LS_INFINITY);
-    expected2 &= cdd_intervalpp(3, 1, -1, dbm_LS_INFINITY);
-    expected2 &= b6;
-    cdd expected = cdd_remove_negative(expected1 | expected2);
+        // Create the expected cdd.
+        cdd expected1 = cdd_intervalpp(1, 0, 0, 4);
+        expected1 &= cdd_intervalpp(2, 1, -5, dbm_LS_INFINITY);
+        expected1 &= cdd_intervalpp(3, 1, -1, dbm_LS_INFINITY);
+        expected1 &= b6;
+        expected1 &= !b7;
+        cdd expected2 = cdd_intervalpp(1, 0, 4, 10);
+        expected2 &= cdd_intervalpp(2, 1, -5, dbm_LS_INFINITY);
+        expected2 &= cdd_intervalpp(3, 1, -1, dbm_LS_INFINITY);
+        expected2 &= b6;
+        cdd expected = cdd_remove_negative(expected1 | expected2);
 
-    // Check whether the result matches the expected one.
-    REQUIRE(cdd_equiv(result, expected));
+        // Check whether the result matches the expected one.
+        REQUIRE(cdd_equiv(result, expected));
+    }
+    cdd_done();
 }
 
 // TODO: the bellow test case passes only on 32-bit, need to fix it

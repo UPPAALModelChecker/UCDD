@@ -971,6 +971,77 @@ TEST_CASE("CDD timed predecessor static test")
     cdd_done();
 }
 
+bool equal(int32_t* arr1, int32_t* arr2, int size)
+{
+    for (int i = 0; i < size; ++i) {
+        if (arr1[i] != arr2[i])
+            return false;
+    }
+    return true;
+}
+
+TEST_CASE("CDD BDD to array test")
+{
+    cdd_init(100000, 10000, 10000);
+    cdd_add_clocks(4);
+    int num_bools = 4;
+    cdd_add_bddvar(num_bools);
+
+    // TODO see issue #36 for this namespace and cdd_done() stuff.
+    {
+        cdd b1 = cdd_bddvarpp(bdd_start_level + 0);
+        cdd b2 = cdd_bddvarpp(bdd_start_level + 1);
+        cdd b3 = cdd_bddvarpp(bdd_start_level + 2);
+        cdd b4 = cdd_bddvarpp(bdd_start_level + 3);
+        int default_value = -1;
+
+        // First test cdd.
+        cdd cdd_input1 = (b1 | (b2 & b3));
+        bdd_arrays array1 = cdd_bdd_to_array(cdd_input1);
+
+        REQUIRE(array1.numTraces == 2);
+        REQUIRE(array1.numBools == num_bools);
+        int32_t expected_vars1[8] = {bdd_start_level, default_value,       default_value,       default_value,
+                                     bdd_start_level, bdd_start_level + 1, bdd_start_level + 2, default_value};
+        REQUIRE(equal(array1.vars, expected_vars1, 8));
+        int32_t expected_values1[8] = {1, default_value, default_value, default_value, 0, 1, 1, default_value};
+        REQUIRE(equal(array1.values, expected_values1, 8));
+
+        delete[] array1.vars;
+        delete[] array1.values;
+
+        // Second test cdd.
+        cdd cdd_input2 = (b1 & !b2 & !b3);
+        bdd_arrays array2 = cdd_bdd_to_array(cdd_input2);
+
+        REQUIRE(array2.numTraces == 1);
+        REQUIRE(array2.numBools == num_bools);
+        int32_t expected_vars2[4] = {bdd_start_level, bdd_start_level + 1, bdd_start_level + 2, default_value};
+        REQUIRE(equal(array2.vars, expected_vars2, 4));
+        int32_t expected_values2[4] = {1, 0, 0, default_value};
+        REQUIRE(equal(array2.values, expected_values2, 4));
+
+        delete[] array2.vars;
+        delete[] array2.values;
+
+        // Third test cdd.
+        cdd cdd_input3 = ((b1 & !b2 & !b3) | (b2 & !b1 & !b4)) & !b4;
+        bdd_arrays array3 = cdd_bdd_to_array(cdd_input3);
+
+        REQUIRE(array3.numTraces == 2);
+        REQUIRE(array3.numBools == num_bools);
+        int32_t expected_vars3[8] = {bdd_start_level, bdd_start_level + 1, bdd_start_level + 2, bdd_start_level + 3,
+                                     bdd_start_level, bdd_start_level + 1, bdd_start_level + 3, default_value};
+        REQUIRE(equal(array3.vars, expected_vars3, 8));
+        int32_t expected_values3[8] = {1, 0, 0, 0, 0, 1, 0, default_value};
+        REQUIRE(equal(array3.values, expected_values3, 8));
+
+        delete[] array3.vars;
+        delete[] array3.values;
+    }
+    cdd_done();
+}
+
 // TODO: the bellow test case passes only on 32-bit, need to fix it
 #if INTPTR_MAX == INT32_MAX
 TEST_CASE("CDD reduce with size 3")

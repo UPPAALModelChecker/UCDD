@@ -561,23 +561,23 @@ bdd_arrays cdd_bdd_to_array(const cdd& state)
     auto init_num_of_traces = std::min(1u << cdd_varnum, 100u);  // 1u<<cdd_varnum <==> 2 ^ cdd_varnum
     int32_t initial_value = -1;
 
-    auto* varsMatrix = new dynamic_two_dim_matrix(init_num_of_traces, cdd_varnum, initial_value);
-    auto* valuesMatrix = new dynamic_two_dim_matrix(init_num_of_traces, cdd_varnum, initial_value);
+    auto varsMatrix = dynamic_two_dim_matrix(init_num_of_traces, cdd_varnum, initial_value);
+    auto valuesMatrix = dynamic_two_dim_matrix(init_num_of_traces, cdd_varnum, initial_value);
 
     // Perform the actual depth-first search.
-    cdd_bdd_to_matrix_rec(state.handle(), varsMatrix, valuesMatrix, 0, false);
+    cdd_bdd_to_matrix_rec(state.handle(), &varsMatrix, &valuesMatrix, 0, false);
 
     // Delete ignored rows from the result.
-    assert(varsMatrix->get_current_row() == valuesMatrix->get_current_row());
-    varsMatrix->delete_ignored_rows();
-    valuesMatrix->delete_ignored_rows();
-    assert(varsMatrix->get_current_row() == valuesMatrix->get_current_row());
+    assert(varsMatrix.get_current_row() == valuesMatrix.get_current_row());
+    varsMatrix.delete_ignored_rows();
+    valuesMatrix.delete_ignored_rows();
+    assert(varsMatrix.get_current_row() == valuesMatrix.get_current_row());
 
     bdd_arrays arrays;
-    arrays.vars = varsMatrix->get_array();
-    arrays.values = valuesMatrix->get_array();
+    arrays.vars = varsMatrix.get_array();
+    arrays.values = valuesMatrix.get_array();
     arrays.numBools = cdd_varnum;
-    arrays.numTraces = varsMatrix->get_current_row() + 1;
+    arrays.numTraces = varsMatrix.get_current_row() + 1;
 
     // Check for the special case when no trace was effectively generated (or all traces ended in
     // the false terminal)
@@ -585,10 +585,8 @@ bdd_arrays cdd_bdd_to_array(const cdd& state)
         arrays.numTraces = 0;
     }
 
-    varsMatrix->clean();
-    valuesMatrix->clean();
-    delete varsMatrix;
-    delete valuesMatrix;
+    varsMatrix.clean();
+    valuesMatrix.clean();
     return arrays;
 }
 

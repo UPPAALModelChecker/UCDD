@@ -375,7 +375,7 @@ public:
     void delete_ignored_rows()
     {
         int i = 0;
-        for (auto it = matrix.begin(); it != matrix.end(); ) {
+        for (auto it = matrix.begin(); it != matrix.end();) {
             if (rows_to_be_ignored.at(i)) {
                 matrix.erase(it);
             } else {
@@ -399,7 +399,7 @@ public:
             for (; j < matrix.at(i).size(); j++) {
                 array[i * num_cols + j] = matrix.at(i).at(j);
             }
-            for(; j < num_cols; j++) {
+            for (; j < num_cols; j++) {
                 array[i * num_cols + j] = default_value;
             }
         }
@@ -417,7 +417,6 @@ private:
     std::vector<std::vector<int32_t>> matrix;
     std::vector<bool> rows_to_be_ignored;
     int num_cols;
-
 };
 
 /**

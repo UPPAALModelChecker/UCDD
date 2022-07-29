@@ -1004,7 +1004,8 @@ TEST_CASE("CDD BDD to array test")
         int32_t expected_vars1[8] = {bdd_start_level, default_value,       default_value,       default_value,
                                      bdd_start_level, bdd_start_level + 1, bdd_start_level + 2, default_value};
         REQUIRE(equal(array1.vars, expected_vars1, 8));
-        int32_t expected_values1[8] = {1, default_value, default_value, default_value, 0, 1, 1, default_value};
+        int32_t expected_values1[8] = {1, default_value, default_value, default_value,
+                                       0, 1, 1, default_value};
         REQUIRE(equal(array1.values, expected_values1, 8));
 
         delete[] array1.vars;
@@ -1033,7 +1034,8 @@ TEST_CASE("CDD BDD to array test")
         int32_t expected_vars3[8] = {bdd_start_level, bdd_start_level + 1, bdd_start_level + 2, bdd_start_level + 3,
                                      bdd_start_level, bdd_start_level + 1, bdd_start_level + 3, default_value};
         REQUIRE(equal(array3.vars, expected_vars3, 8));
-        int32_t expected_values3[8] = {1, 0, 0, 0, 0, 1, 0, default_value};
+        int32_t expected_values3[8] = {1, 0, 0, 0,
+                                       0, 1, 0, default_value};
         REQUIRE(equal(array3.values, expected_values3, 8));
 
         delete[] array3.vars;

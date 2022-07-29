@@ -321,38 +321,26 @@ class dynamic_two_dim_matrix
 public:
     /**
      * Constructor for the \a dynamic_two_dim_matrix class.
-     * @param init_num_rows the initial number of rows of the matrix.
      * @param num_cols the fixed number of columns.
-     * @param initial_value the initial value for each element of the matrix.
      */
-    dynamic_two_dim_matrix(uint32_t init_num_rows, int num_cols, int32_t initial_value)
+    dynamic_two_dim_matrix(int num_cols)
     {
-        assert(init_num_rows > 0);
         assert(num_cols > 0);
-        num_rows = init_num_rows;
         this->num_cols = num_cols;
-        current_row = 0;
-        this->initial_value = initial_value;
 
         // Initialize the matrix.
-        matrix = new int32_t*[num_rows];
-        rows_to_be_ignored = new bool[num_rows];
-        for (int i = 0; i < num_rows; i++) {
-            matrix[i] = initialized_array();
-            rows_to_be_ignored[i] = false;
-        }
+        matrix.emplace_back();
+        rows_to_be_ignored.push_back(false);
     }
 
     /**
-     * Add a new value to the current row at the provided column index.
+     * Add a new value at the end the current row as long as there is place left.
      * @param value the value to add.
-     * @param column_index the column index.
      */
-    void add_value_to_row(int32_t value, int column_index)
+    void add_value_to_row(int32_t value)
     {
-        assert(column_index < num_cols);
-        assert(column_index >= 0);
-        matrix[current_row][column_index] = value;
+        assert(matrix.back().size() < num_cols);
+        matrix.back().push_back(value);
     }
 
     /**
@@ -363,23 +351,22 @@ public:
     void next_row(int copy_to_column)
     {
         assert(copy_to_column < num_cols);
-        current_row++;
+        assert(!matrix.empty());
 
-        // Check whether we have to resize.
-        if (current_row == num_rows) {
-            resize();
-        }
+        std::vector<int32_t> new_row;
 
         // Copy values from the previous row.
         for (int j = 0; j <= copy_to_column; j++) {
-            matrix[current_row][j] = matrix[current_row - 1][j];
+            new_row.push_back(matrix.at(matrix.size() - 1).at(j));
         }
+        matrix.push_back(new_row);
+        rows_to_be_ignored.push_back(false);
     }
 
     /**
      * Indicate that the current row needs to be ignored.
      */
-    void ignore_current_row() { rows_to_be_ignored[current_row] = true; }
+    void ignore_current_row() { rows_to_be_ignored.back() = true; }
 
     /**
      * Delete the ignored rows from the matrix and shift the remaining rows upwards, i.e.,
@@ -387,34 +374,33 @@ public:
      */
     void delete_ignored_rows()
     {
-        int num_ignored_so_far = 0;
-        for (int i = 0; i <= current_row; i++) {
-            if (rows_to_be_ignored[i]) {
-                num_ignored_so_far++;
-                delete[] matrix[i];
+        int i = 0;
+        for (auto it = matrix.begin(); it != matrix.end(); ) {
+            if (rows_to_be_ignored.at(i)) {
+                matrix.erase(it);
             } else {
-                matrix[i - num_ignored_so_far] = matrix[i];
+                ++it;
             }
+            ++i;
         }
-
-        // Add empty rows at the end. No need to go beyond current_row, as those are still untouched rows.
-        for (int i = current_row - num_ignored_so_far + 1; i <= current_row; i++) {
-            matrix[i] = initialized_array();
-        }
-        current_row -= num_ignored_so_far;
     }
 
     /**
      * Get the current matrix as a single dimensional array of size \a num_cols * (\a current_row + 1).
+     * Entries that were not added will get the default value.
      * @return the matrix as a single row array.
      */
-    int32_t* get_array()
+    int32_t* get_array(int32_t default_value)
     {
-        auto* array = new int32_t[num_cols * (current_row + 1)];
+        auto* array = new int32_t[num_cols * (matrix.size())];
 
-        for (int i = 0; i <= current_row; i++) {
-            for (int j = 0; j < num_cols; j++) {
-                array[i * num_cols + j] = matrix[i][j];
+        for (int i = 0; i < matrix.size(); i++) {
+            int j = 0;
+            for (; j < matrix.at(i).size(); j++) {
+                array[i * num_cols + j] = matrix.at(i).at(j);
+            }
+            for(; j < num_cols; j++) {
+                array[i * num_cols + j] = default_value;
             }
         }
 
@@ -422,73 +408,16 @@ public:
     }
 
     /**
-     * Get the current row index.
-     * @return the current row index.
+     * Get the current row size of the matrix.
+     * @return the current row size.
      */
-    int get_current_row() { return current_row; }
-
-    /**
-     * Clean up the matrix by deleting the memory pointers. Should be called before deleting the actual object.
-     */
-    void clean()
-    {
-        for (int i = 0; i < num_rows; i++) {
-            delete[] matrix[i];
-        }
-        delete[] matrix;
-        delete[] rows_to_be_ignored;
-    }
+    uint32_t get_current_row_size() { return matrix.size(); }
 
 private:
-    int32_t** matrix;
-    int num_rows;
+    std::vector<std::vector<int32_t>> matrix;
+    std::vector<bool> rows_to_be_ignored;
     int num_cols;
-    int current_row;
-    int32_t initial_value;
-    bool* rows_to_be_ignored;
 
-    /**
-     * Create an array of size \a num_cols filled with the initial value.
-     * @return an array with initial values.
-     */
-    int32_t* initialized_array()
-    {
-        auto* array = new int32_t[num_cols];
-        for (int j = 0; j < num_cols; j++) {
-            array[j] = initial_value;
-        }
-        return array;
-    }
-
-    /**
-     * Resize the matrix by doubling the number of rows allocated in memory.
-     */
-    void resize()
-    {
-        auto** new_matrix = new int32_t*[num_rows * 2];
-        auto* new_rows_to_be_ignored = new bool[num_rows * 2];
-
-        // Copy old rows into new matrix.
-        for (int i = 0; i < num_rows; i++) {
-            new_matrix[i] = matrix[i];
-            new_rows_to_be_ignored[i] = rows_to_be_ignored[i];
-        }
-
-        // Add initial values to the new rows.
-        for (int i = num_rows; i < 2 * num_rows; i++) {
-            new_matrix[i] = initialized_array();
-            new_rows_to_be_ignored[i] = false;
-        }
-
-        // Assign new stuff to the class properties.
-        delete matrix;
-        delete rows_to_be_ignored;
-        matrix = new_matrix;
-        rows_to_be_ignored = new_rows_to_be_ignored;
-        num_rows = 2 * num_rows;
-        delete[] new_matrix;
-        delete[] new_rows_to_be_ignored;
-    }
 };
 
 /**
@@ -536,14 +465,14 @@ void cdd_bdd_to_matrix_rec(ddNode* r, dynamic_two_dim_matrix* varsMatrix, dynami
         bddNode* node = bdd_node(r);
 
         // First follow the true child of the BDD node.
-        varsMatrix->add_value_to_row(node->level, current_step);
-        valuesMatrix->add_value_to_row(1, current_step);
+        varsMatrix->add_value_to_row(node->level);
+        valuesMatrix->add_value_to_row(1);
         cdd_bdd_to_matrix_rec(node->high, varsMatrix, valuesMatrix, current_step + 1, negated ^ cdd_is_negated(r));
 
         // Now follow the false child of the BDD node.
         varsMatrix->next_row(current_step);
-        valuesMatrix->next_row(current_step);
-        valuesMatrix->add_value_to_row(0, current_step);
+        valuesMatrix->next_row(current_step - 1);
+        valuesMatrix->add_value_to_row(0);
         cdd_bdd_to_matrix_rec(node->low, varsMatrix, valuesMatrix, current_step + 1, negated ^ cdd_is_negated(r));
     } else {
         printf("not called with a BDD node");
@@ -558,35 +487,31 @@ void cdd_bdd_to_matrix_rec(ddNode* r, dynamic_two_dim_matrix* varsMatrix, dynami
  */
 bdd_arrays cdd_bdd_to_array(const cdd& state)
 {
-    auto init_num_of_traces = std::min(1u << cdd_varnum, 100u);  // 1u<<cdd_varnum <==> 2 ^ cdd_varnum
-    int32_t initial_value = -1;
-
-    auto varsMatrix = dynamic_two_dim_matrix(init_num_of_traces, cdd_varnum, initial_value);
-    auto valuesMatrix = dynamic_two_dim_matrix(init_num_of_traces, cdd_varnum, initial_value);
+    auto varsMatrix = dynamic_two_dim_matrix(cdd_varnum);
+    auto valuesMatrix = dynamic_two_dim_matrix(cdd_varnum);
 
     // Perform the actual depth-first search.
     cdd_bdd_to_matrix_rec(state.handle(), &varsMatrix, &valuesMatrix, 0, false);
 
     // Delete ignored rows from the result.
-    assert(varsMatrix.get_current_row() == valuesMatrix.get_current_row());
+    assert(varsMatrix.get_current_row_size() == valuesMatrix.get_current_row_size());
     varsMatrix.delete_ignored_rows();
     valuesMatrix.delete_ignored_rows();
-    assert(varsMatrix.get_current_row() == valuesMatrix.get_current_row());
+    assert(varsMatrix.get_current_row_size() == valuesMatrix.get_current_row_size());
 
+    int32_t default_value = -1;
     bdd_arrays arrays;
-    arrays.vars = varsMatrix.get_array();
-    arrays.values = valuesMatrix.get_array();
+    arrays.vars = varsMatrix.get_array(default_value);
+    arrays.values = valuesMatrix.get_array(default_value);
     arrays.numBools = cdd_varnum;
-    arrays.numTraces = varsMatrix.get_current_row() + 1;
+    arrays.numTraces = varsMatrix.get_current_row_size();
 
     // Check for the special case when no trace was effectively generated (or all traces ended in
     // the false terminal)
-    if (arrays.vars[0] == initial_value) {
+    if (arrays.vars[0] == default_value) {
         arrays.numTraces = 0;
     }
 
-    varsMatrix.clean();
-    valuesMatrix.clean();
     return arrays;
 }
 

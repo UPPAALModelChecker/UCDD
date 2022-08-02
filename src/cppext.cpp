@@ -323,15 +323,7 @@ public:
      * Constructor for the \a dynamic_two_dim_matrix class.
      * @param num_cols the fixed number of columns.
      */
-    dynamic_two_dim_matrix(int num_cols)
-    {
-        assert(num_cols > 0);
-        this->num_cols = num_cols;
-
-        // Initialize the matrix.
-        matrix.emplace_back();
-        rows_to_be_ignored.push_back(false);
-    }
+    dynamic_two_dim_matrix(int num_cols): num_cols{num_cols}, matrix(1), rows_to_be_ignored(1, false) {}
 
     /**
      * Add a new value at the end the current row as long as there is place left.
@@ -353,13 +345,7 @@ public:
         assert(copy_to_column < num_cols);
         assert(!matrix.empty());
 
-        std::vector<int32_t> new_row;
-
-        // Copy values from the previous row.
-        for (int j = 0; j <= copy_to_column; j++) {
-            new_row.push_back(matrix.at(matrix.size() - 1).at(j));
-        }
-        matrix.push_back(new_row);
+        matrix.emplace_back(matrix.back().begin(), matrix.back().begin() + copy_to_column + 1);
         rows_to_be_ignored.push_back(false);
     }
 
@@ -394,14 +380,11 @@ public:
     {
         auto* array = new int32_t[num_cols * (matrix.size())];
 
-        for (int i = 0; i < matrix.size(); i++) {
-            int j = 0;
-            for (; j < matrix.at(i).size(); j++) {
-                array[i * num_cols + j] = matrix.at(i).at(j);
-            }
-            for (; j < num_cols; j++) {
-                array[i * num_cols + j] = default_value;
-            }
+        for (size_t i = 0; i < matrix.size(); ++i) {
+            const auto& row = matrix[i];         // Reference: just an alias, no copy
+            auto target = array + i * num_cols;  // Common pointer value for writing to
+            std::copy(row.begin(), row.end(), target);
+            std::fill(target + row.size(), target + num_cols, default_value);  // Pad if necessary
         }
 
         return array;
@@ -429,7 +412,7 @@ private:
  * @param negated Whether this node is reached by (an odd number of) negated node(s).
  * @param num_bools the number of boolean variables.
  */
-void cdd_bdd_to_matrix_rec(ddNode* r, dynamic_two_dim_matrix* varsMatrix, dynamic_two_dim_matrix* valuesMatrix,
+void cdd_bdd_to_matrix_rec(ddNode* r, dynamic_two_dim_matrix& varsMatrix, dynamic_two_dim_matrix& valuesMatrix,
                            int32_t current_step, bool negated)
 {
     // The four terminating cases.
@@ -441,8 +424,8 @@ void cdd_bdd_to_matrix_rec(ddNode* r, dynamic_two_dim_matrix* varsMatrix, dynami
         // We cannot delete the row here already, as we might still copy part of the
         // row (trace) in the depth-first search. Therefore, we only mark the current row
         // as to be ignored.
-        varsMatrix->ignore_current_row();
-        valuesMatrix->ignore_current_row();
+        varsMatrix.ignore_current_row();
+        valuesMatrix.ignore_current_row();
         return;
     }
     if (r == cddfalse && negated) {
@@ -453,8 +436,8 @@ void cdd_bdd_to_matrix_rec(ddNode* r, dynamic_two_dim_matrix* varsMatrix, dynami
         // We cannot delete the row here already, as we might still copy part of the
         // row (trace) in the depth-first search. Therefore, we only mark the current row
         // as to be ignored.
-        varsMatrix->ignore_current_row();
-        valuesMatrix->ignore_current_row();
+        varsMatrix.ignore_current_row();
+        valuesMatrix.ignore_current_row();
         return;
     }
 
@@ -464,14 +447,14 @@ void cdd_bdd_to_matrix_rec(ddNode* r, dynamic_two_dim_matrix* varsMatrix, dynami
         bddNode* node = bdd_node(r);
 
         // First follow the true child of the BDD node.
-        varsMatrix->add_value_to_row(node->level);
-        valuesMatrix->add_value_to_row(1);
+        varsMatrix.add_value_to_row(node->level);
+        valuesMatrix.add_value_to_row(1);
         cdd_bdd_to_matrix_rec(node->high, varsMatrix, valuesMatrix, current_step + 1, negated ^ cdd_is_negated(r));
 
         // Now follow the false child of the BDD node.
-        varsMatrix->next_row(current_step);
-        valuesMatrix->next_row(current_step - 1);
-        valuesMatrix->add_value_to_row(0);
+        varsMatrix.next_row(current_step);
+        valuesMatrix.next_row(current_step - 1);
+        valuesMatrix.add_value_to_row(0);
         cdd_bdd_to_matrix_rec(node->low, varsMatrix, valuesMatrix, current_step + 1, negated ^ cdd_is_negated(r));
     } else {
         printf("not called with a BDD node");
@@ -490,7 +473,7 @@ bdd_arrays cdd_bdd_to_array(const cdd& state)
     auto valuesMatrix = dynamic_two_dim_matrix(cdd_varnum);
 
     // Perform the actual depth-first search.
-    cdd_bdd_to_matrix_rec(state.handle(), &varsMatrix, &valuesMatrix, 0, false);
+    cdd_bdd_to_matrix_rec(state.handle(), varsMatrix, valuesMatrix, 0, false);
 
     // Delete ignored rows from the result.
     assert(varsMatrix.get_current_row_size() == valuesMatrix.get_current_row_size());

@@ -314,6 +314,185 @@ cdd cdd_past(const cdd& state)
 }
 
 /**
+ * Class for a 2D int32_t matrix where the number of rows is dynamic.
+ */
+class dynamic_two_dim_matrix
+{
+public:
+    /**
+     * Constructor for the \a dynamic_two_dim_matrix class.
+     * @param num_cols the fixed number of columns.
+     */
+    dynamic_two_dim_matrix(int num_cols): num_cols{num_cols}, matrix(1), rows_to_be_ignored(1, false) {}
+
+    /**
+     * Add a new value at the end the current row as long as there is place left.
+     * @param value the value to add.
+     */
+    void add_value_to_row(int32_t value)
+    {
+        assert(matrix.back().size() < num_cols);
+        matrix.back().push_back(value);
+    }
+
+    /**
+     * Change the current row to the next row. Resizing is taking place when necessary. The values
+     * of the current row are copied to the next row up to and including the provided column.
+     * @param copy_to_column copy the previous values up to this column index (including this column).
+     */
+    void next_row(int copy_to_column)
+    {
+        assert(copy_to_column < num_cols);
+        assert(!matrix.empty());
+
+        matrix.emplace_back(matrix.back().begin(), matrix.back().begin() + copy_to_column + 1);
+        rows_to_be_ignored.push_back(false);
+    }
+
+    /**
+     * Indicate that the current row needs to be ignored.
+     */
+    void ignore_current_row() { rows_to_be_ignored.back() = true; }
+
+    /**
+     * Delete the ignored rows from the matrix and shift the remaining rows upwards, i.e.,
+     * if row \a is to be ignored, the new row \i of the matrix is row \i + 1;
+     */
+    void delete_ignored_rows()
+    {
+        int i = 0;
+        matrix.erase(std::remove_if(matrix.begin(), matrix.end(),
+                                    [&i, this](const auto& value) { return rows_to_be_ignored.at(i++); }),
+                     matrix.end());
+    }
+
+    /**
+     * Get the current matrix as a single dimensional array of size \a num_cols * (\a current_row + 1).
+     * Entries that were not added will get the default value.
+     * @return the matrix as a single row array.
+     */
+    int32_t* get_array(int32_t default_value)
+    {
+        auto* array = new int32_t[num_cols * (matrix.size())];
+
+        for (size_t i = 0; i < matrix.size(); ++i) {
+            const auto& row = matrix[i];         // Reference: just an alias, no copy
+            auto target = array + i * num_cols;  // Common pointer value for writing to
+            std::copy(row.begin(), row.end(), target);
+            std::fill(target + row.size(), target + num_cols, default_value);  // Pad if necessary
+        }
+
+        return array;
+    }
+
+    /**
+     * Get the current row size of the matrix.
+     * @return the current row size.
+     */
+    uint32_t get_current_row_size() { return matrix.size(); }
+
+private:
+    std::vector<std::vector<int32_t>> matrix;
+    std::vector<bool> rows_to_be_ignored;
+    int num_cols;
+};
+
+/**
+ * Transform a BDD recursively into an matrix representation.
+ *
+ * @param r a cdd node from the bdd.
+ * @param varsMatrix the matrix containing the traces with the boolean variable id numbers.
+ * @param valuesMatrix the matrix containing the traces with the boolean variable values.
+ * @param current_step the current step number (= depth of the trace from the top BDD node).
+ * @param negated Whether this node is reached by (an odd number of) negated node(s).
+ * @param num_bools the number of boolean variables.
+ */
+void cdd_bdd_to_matrix_rec(ddNode* r, dynamic_two_dim_matrix& varsMatrix, dynamic_two_dim_matrix& valuesMatrix,
+                           int32_t current_step, bool negated)
+{
+    // The four terminating cases.
+    if (r == cddtrue && !negated) {
+        // Nothing special has to be done.
+        return;
+    }
+    if (r == cddtrue && negated) {
+        // We cannot delete the row here already, as we might still copy part of the
+        // row (trace) in the depth-first search. Therefore, we only mark the current row
+        // as to be ignored.
+        varsMatrix.ignore_current_row();
+        valuesMatrix.ignore_current_row();
+        return;
+    }
+    if (r == cddfalse && negated) {
+        // Nothing special has to be done.
+        return;
+    }
+    if (r == cddfalse && !negated) {
+        // We cannot delete the row here already, as we might still copy part of the
+        // row (trace) in the depth-first search. Therefore, we only mark the current row
+        // as to be ignored.
+        varsMatrix.ignore_current_row();
+        valuesMatrix.ignore_current_row();
+        return;
+    }
+
+    // We have not reached the end of a trace.
+    assert(!cdd_isterminal(r));
+    if (cdd_info(r)->type == TYPE_BDD) {
+        bddNode* node = bdd_node(r);
+
+        // First follow the true child of the BDD node.
+        varsMatrix.add_value_to_row(node->level);
+        valuesMatrix.add_value_to_row(1);
+        cdd_bdd_to_matrix_rec(node->high, varsMatrix, valuesMatrix, current_step + 1, negated ^ cdd_is_negated(r));
+
+        // Now follow the false child of the BDD node.
+        varsMatrix.next_row(current_step);
+        valuesMatrix.next_row(current_step - 1);
+        valuesMatrix.add_value_to_row(0);
+        cdd_bdd_to_matrix_rec(node->low, varsMatrix, valuesMatrix, current_step + 1, negated ^ cdd_is_negated(r));
+    } else {
+        printf("not called with a BDD node");
+    }
+}
+
+/**
+ * Transform a BDD into an array representation.
+ *
+ * @param state a cdd containing only BDD or terminal nodes
+ * @return an array representation of the BDD.
+ */
+bdd_arrays cdd_bdd_to_array(const cdd& state)
+{
+    auto varsMatrix = dynamic_two_dim_matrix(cdd_varnum);
+    auto valuesMatrix = dynamic_two_dim_matrix(cdd_varnum);
+
+    // Perform the actual depth-first search.
+    cdd_bdd_to_matrix_rec(state.handle(), varsMatrix, valuesMatrix, 0, false);
+
+    // Delete ignored rows from the result.
+    assert(varsMatrix.get_current_row_size() == valuesMatrix.get_current_row_size());
+    varsMatrix.delete_ignored_rows();
+    valuesMatrix.delete_ignored_rows();
+    assert(varsMatrix.get_current_row_size() == valuesMatrix.get_current_row_size());
+
+    int32_t default_value = -1;
+    bdd_arrays arrays;
+    arrays.vars = varsMatrix.get_array(default_value);
+    arrays.values = valuesMatrix.get_array(default_value);
+    arrays.numBools = cdd_varnum;
+    arrays.numTraces = varsMatrix.get_current_row_size();
+
+    // Check for the special case when no trace was effectively generated (or all traces ended in
+    // the false terminal)
+    if (arrays.vars[0] == default_value) {
+        arrays.numTraces = 0;
+    }
+
+    return arrays;
+}
+
+/**
  * Apply clock and boolean variable resets.
  *
  * @param state cdd to be reset

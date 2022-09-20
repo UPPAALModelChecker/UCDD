@@ -827,6 +827,29 @@ void test_predt(size_t size)
     REQUIRE(cdd_equiv(cdd_predt(test, right), cdd_remove_negative(cdd_past(left))));
 }
 
+void test_bdd_to_array(size_t size)
+{
+    // First some trivial cases.
+    bdd_arrays result = cdd_bdd_to_array(cdd_true());
+    REQUIRE(result.numBools == cdd_varnum);
+    REQUIRE(result.numTraces == 0);
+    delete[] result.vars;
+    delete[] result.values;
+
+    // Create a random BDD.
+    cdd bdd_part = generate_bdd(size);
+
+    bdd_arrays result1 = cdd_bdd_to_array(bdd_part);
+    if (cdd_isterminal(bdd_part.handle())) {
+        REQUIRE(result1.numTraces == 0);
+    } else {
+        REQUIRE(result1.numTraces > 0);
+    }
+
+    delete[] result1.vars;
+    delete[] result1.values;
+}
+
 static void test(const char* name, TestFunction f, size_t size)
 {
     cout << name << " size = " << size << endl;
@@ -865,6 +888,7 @@ static void big_test(uint32_t n)
             test("test_transition_back", test_transition_back, i);
             test("test_transition_back_past", test_transition_back_past, i);
             test("test_predt       ", test_predt, i);
+            test("test_bdd_to_array", test_bdd_to_array, i);
         }
         test("test_remove_negative", test_remove_negative, n);
         passDBMs = dbm_wrap::get_allDBMs() - DBM_sofar;
@@ -943,6 +967,77 @@ TEST_CASE("CDD timed predecessor static test")
 
         // Check whether the result matches the expected one.
         REQUIRE(cdd_equiv(result, expected));
+    }
+    cdd_done();
+}
+
+bool equal(int32_t* arr1, int32_t* arr2, int size)
+{
+    for (int i = 0; i < size; ++i) {
+        if (arr1[i] != arr2[i])
+            return false;
+    }
+    return true;
+}
+
+TEST_CASE("CDD BDD to array test")
+{
+    cdd_init(100000, 10000, 10000);
+    cdd_add_clocks(4);
+    int num_bools = 4;
+    cdd_add_bddvar(num_bools);
+
+    // TODO see issue #36 for this namespace and cdd_done() stuff.
+    {
+        cdd b1 = cdd_bddvarpp(bdd_start_level + 0);
+        cdd b2 = cdd_bddvarpp(bdd_start_level + 1);
+        cdd b3 = cdd_bddvarpp(bdd_start_level + 2);
+        cdd b4 = cdd_bddvarpp(bdd_start_level + 3);
+        int default_value = -1;
+
+        // First test cdd.
+        cdd cdd_input1 = (b1 | (b2 & b3));
+        bdd_arrays array1 = cdd_bdd_to_array(cdd_input1);
+
+        REQUIRE(array1.numTraces == 2);
+        REQUIRE(array1.numBools == num_bools);
+        int32_t expected_vars1[8] = {bdd_start_level, default_value,       default_value,       default_value,
+                                     bdd_start_level, bdd_start_level + 1, bdd_start_level + 2, default_value};
+        REQUIRE(equal(array1.vars, expected_vars1, 8));
+        int32_t expected_values1[8] = {1, default_value, default_value, default_value, 0, 1, 1, default_value};
+        REQUIRE(equal(array1.values, expected_values1, 8));
+
+        delete[] array1.vars;
+        delete[] array1.values;
+
+        // Second test cdd.
+        cdd cdd_input2 = (b1 & !b2 & !b3);
+        bdd_arrays array2 = cdd_bdd_to_array(cdd_input2);
+
+        REQUIRE(array2.numTraces == 1);
+        REQUIRE(array2.numBools == num_bools);
+        int32_t expected_vars2[4] = {bdd_start_level, bdd_start_level + 1, bdd_start_level + 2, default_value};
+        REQUIRE(equal(array2.vars, expected_vars2, 4));
+        int32_t expected_values2[4] = {1, 0, 0, default_value};
+        REQUIRE(equal(array2.values, expected_values2, 4));
+
+        delete[] array2.vars;
+        delete[] array2.values;
+
+        // Third test cdd.
+        cdd cdd_input3 = ((b1 & !b2 & !b3) | (b2 & !b1 & !b4)) & !b4;
+        bdd_arrays array3 = cdd_bdd_to_array(cdd_input3);
+
+        REQUIRE(array3.numTraces == 2);
+        REQUIRE(array3.numBools == num_bools);
+        int32_t expected_vars3[8] = {bdd_start_level, bdd_start_level + 1, bdd_start_level + 2, bdd_start_level + 3,
+                                     bdd_start_level, bdd_start_level + 1, bdd_start_level + 3, default_value};
+        REQUIRE(equal(array3.vars, expected_vars3, 8));
+        int32_t expected_values3[8] = {1, 0, 0, 0, 0, 1, 0, default_value};
+        REQUIRE(equal(array3.values, expected_values3, 8));
+
+        delete[] array3.vars;
+        delete[] array3.values;
     }
     cdd_done();
 }

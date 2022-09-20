@@ -361,14 +361,9 @@ public:
     void delete_ignored_rows()
     {
         int i = 0;
-        for (auto it = matrix.begin(); it != matrix.end();) {
-            if (rows_to_be_ignored.at(i)) {
-                matrix.erase(it);
-            } else {
-                ++it;
-            }
-            ++i;
-        }
+        matrix.erase(std::remove_if(matrix.begin(), matrix.end(),
+                                    [&i, this](const auto& value) { return rows_to_be_ignored.at(i++); }),
+                     matrix.end());
     }
 
     /**

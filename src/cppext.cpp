@@ -315,7 +315,7 @@ cdd cdd_past(const cdd& state)
 /**
  * Checks if a CDD is a BDD.
  * @param state: The CDD to check.
- * @return <code>true</code> if the CDD is a BDD and <code>false</code> if it is not
+ * @return <code>true</code> if the CDD is a BDD and <code>false</code> if it is not.
  */
 bool cdd_isBDD(const cdd& state) { return cdd_isterminal(state.root) || cdd_info(state.handle())->type == TYPE_BDD; }
 

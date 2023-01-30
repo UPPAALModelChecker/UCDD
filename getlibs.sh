@@ -25,9 +25,9 @@ cd "${LIBS_SOURCES}"
 # DOCTEST
 PREFIX="$CMAKE_PREFIX_PATH/doctest"
 if [ ! -d "$PREFIX" ]; then
-    wget -nv -N https://github.com/doctest/doctest/archive/refs/tags/v2.4.8.tar.gz
-    tar -xf v2.4.8.tar.gz
-    SRC_DIR="${LIBS_SOURCES}/doctest-2.4.8"
+    wget -nv -N https://github.com/doctest/doctest/archive/refs/tags/v2.4.9.tar.gz
+    tar -xf v2.4.9.tar.gz
+    SRC_DIR="${LIBS_SOURCES}/doctest-2.4.9"
     BLD_DIR="$SRC_DIR/build"
     cmake $CMAKE_ARGS -DCMAKE_INSTALL_PREFIX="$PREFIX" -DBUILD_SHARED_LIBS=OFF "$SRC_DIR" -B "$BLD_DIR"
     cmake --build "$BLD_DIR" --config Release

@@ -313,7 +313,7 @@ cdd cdd_past(const cdd& state)
     return res;
 }
 /**
- * Checks if a CDD is a BDD
+ * Checks if a CDD is a BDD.
  * @param state: The CDD to check
  * @return <code>true</code> if the CDD is a BDD and <code>false</code> if it is not
  */

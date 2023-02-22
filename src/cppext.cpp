@@ -312,6 +312,12 @@ cdd cdd_past(const cdd& state)
     free(dbm);
     return res;
 }
+/**
+ * Checks if a CDD is a BDD.
+ * @param state: The CDD to check.
+ * @return <code>true</code> if the CDD is a BDD and <code>false</code> if it is not.
+ */
+bool cdd_isBDD(const cdd& state) { return cdd_isterminal(state.root) || cdd_info(state.handle())->type == TYPE_BDD; }
 
 /**
  * Class for a 2D int32_t matrix where the number of rows is dynamic.

@@ -12,23 +12,23 @@
  * Test for CDD module.
  */
 
-#include "dbm/dbm.h"
-#include "dbm/gen.h"
 #include "cdd/cdd.h"
 #include "cdd/debug.h"
 #include "cdd/kernel.h"
-#include "base/Timer.h"
-#include "base/random.h"
-#include "debug/macros.h"
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include <dbm/dbm.h>
+#include <dbm/gen.h>
+#include <dbm/print.h>
+
+#include <base/Timer.h>
+#include <base/random.h>
+#include <debug/macros.h>
+
 #include <doctest/doctest.h>
 
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
-
-#include <dbm/print.h>
 
 using std::endl;
 using std::cerr;

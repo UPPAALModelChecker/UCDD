@@ -7,50 +7,88 @@ on:
     branches: [ main ]
 
 jobs:
-  format:
+  formatting:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Format
+    - name: Formatting
       run: find src include test -iregex '.*\.\(c\|h\|cpp\|hpp\|cc\|hh\|cxx\|hxx\)$' | xargs clang-format -n -Werror
   build-linux:
     runs-on: ubuntu-latest
+    env:
+      TARGET: x86_64-linux
+      CMAKE_TOOLCHAIN_FILE: ${{ github.workspace }}/cmake/toolchain/${{ env.TARGET }}.cmake
+      CMAKE_BUILD_TYPE: Debug
+      CTEST_OUTPUT_ON_FAILURE: 1
     steps:
-    - uses: actions/checkout@v2
-    - name: Get dependencies
-      run: sudo apt-get update && sudo apt-get install libboost-all-dev doctest-dev && ./getlibs.sh
-    - name: Build and test
-      run: |
-          export CTEST_OUTPUT_ON_FAILURE=1
-          cmake -DTESTING=yes . -B build
-          cmake --build build
-          (cd build ; ctest)
+      - uses: actions/checkout@v2
+      - name: Build without getlibs
+        run: |
+          BUILD=build-$TARGET-$CMAKE_BUILD_TYPE
+          cmake -S . -B $BUILD
+          cmake --build $BUILD --config $CMAKE_BUILD_TYPE
+          (cd $BUILD ; ctest -C $CMAKE_BUILD_TYPE)
+      - name: Get dependencies
+        run: CMAKE_BUILD_TYPE=Release ./getlibs.sh $TARGET
+      - name: Build with getlibs
+        run: | 
+          BUILD=build-$TARGET-libs-$CMAKE_BUILD_TYPE
+          cmake -S . -B $BUILD
+          cmake --build $BUILD --config $CMAKE_BUILD_TYPE
+          (cd $BUILD ; ctest -C $CMAKE_BUILD_TYPE)
   build-win:
     runs-on: ubuntu-latest
+    env:
+      TARGET: x86_64-w64-mingw32
+      WINARCH: win64
+      CMAKE_TOOLCHAIN_FILE: ${{ github.workspace }}/cmake/toolchain/${{ env.TARGET }}.cmake
+      CMAKE_BUILD_TYPE: Debug
+      CTEST_OUTPUT_ON_FAILURE: 1
     steps:
-    - uses: actions/checkout@v2
-    - name: Get dependencies
-      run: |
-          sudo apt-get update
-          sudo apt-get install cmake make g++-mingw-w64-x86-64 mingw-w64-x86-64-dev mingw-w64-tools wine wine-binfmt
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        run: |
+          sudo apt-get -qqy update
+          sudo apt-get -qqy install cmake make g++-mingw-w64-x86-64 mingw-w64-x86-64-dev mingw-w64-tools wine wine-binfmt
           sudo update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix
           sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
-          CMAKE_TOOLCHAIN_FILE="$(pwd)/toolchains/x86_64-w64-mingw32.cmake" ./getlibs.sh
-    - name: Build and test
-      run: |
-          export CTEST_OUTPUT_ON_FAILURE=1
-          cmake -DSTATIC=yes -DTESTING=yes -DCMAKE_TOOLCHAIN_FILE=toolchains/x86_64-w64-mingw32.cmake . -B build
-          cmake --build build
-          (cd build ; ctest)
+          WINEPATH=$(${{ github.workspace }}/winepath-for ${{ env.TARGET }})
+          echo "WINEPATH=$WINEPATH" >> $GITHUB_ENV
+      - name: Build without getlibs
+        run: |
+          BUILD=build-$TARGET-$CMAKE_BUILD_TYPE
+          cmake -S . -B $BUILD -DSTATIC=yes
+          cmake --build $BUILD --config $CMAKE_BUILD_TYPE
+          (cd $BUILD ; ctest -C $CMAKE_BUILD_TYPE)
+      - name: Get dependencies
+        run:
+          CMAKE_BUILD_TYPE=Release ./getlibs.sh $TARGET
+      - name: Build with getlibs
+        run: |
+          BUILD=build-$TARGET-libs-$CMAKE_BUILD_TYPE
+          cmake -S . -B $BUILD -DSTATIC=yes
+          cmake --build $BUILD --config $CMAKE_BUILD_TYPE
+          (cd $BUILD ; ctest -C $CMAKE_BUILD_TYPE)
   build-macos:
     runs-on: macos-latest
+    env:
+      TARGET: x86_64-darwin
+      CMAKE_TOOLCHAIN_FILE: ${{ github.workspace }}/cmake/toolchain/${{ env.TARGET }}.cmake
+      CMAKE_BUILD_TYPE: Debug
+      CTEST_OUTPUT_ON_FAILURE: 1
     steps:
-    - uses: actions/checkout@v2
-    - name: Get dependencies
-      run: brew install boost doctest && ./getlibs.sh
-    - name: Build and test
-      run: |
-          export CTEST_OUTPUT_ON_FAILURE=1
-          cmake -DTESTING=yes . -B build
-          cmake --build build
-          (cd build ; ctest)
+      - uses: actions/checkout@v2
+      - name: Build without getlibs
+        run: |
+          BUILD=build-$TARGET-$CMAKE_BUILD_TYPE
+          cmake -S . -B $BUILD
+          cmake --build $BUILD --config $CMAKE_BUILD_TYPE
+          (cd $BUILD ; ctest -C $CMAKE_BUILD_TYPE)
+      - name: Get dependencies
+        run: CMAKE_BUILD_TYPE=Release ./getlibs.sh
+      - name: Build with getlibs
+        run: |
+          BUILD=build-$TARGET-libs-$CMAKE_BUILD_TYPE
+          cmake -S . -B $BUILD
+          cmake --build $BUILD --config $CMAKE_BUILD_TYPE
+          (cd $BUILD ; ctest -C $CMAKE_BUILD_TYPE)

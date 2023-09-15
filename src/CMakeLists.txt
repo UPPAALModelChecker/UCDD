@@ -1,6 +1,6 @@
 file(GLOB cdd_source "*.c" "*.cpp" "*.h")
 add_library(UCDD STATIC ${cdd_source})
-target_link_libraries(UCDD PUBLIC xxHash PRIVATE UDBM)
+target_link_libraries(UCDD PUBLIC UDBM xxHash)
 add_library(UCDD::UCDD ALIAS UCDD)
 
 target_include_directories(UCDD

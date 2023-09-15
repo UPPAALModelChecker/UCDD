@@ -4,6 +4,7 @@ include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
 option(UCDD_WITH_TESTS "UCDD Unit tests" ON)
+option(FIND_FATAL "Stop upon find_package errors" OFF)
 include(cmake/sanitizer.cmake)
 
 cmake_policy(SET CMP0048 NEW) # project() command manages VERSION variables
@@ -15,24 +16,13 @@ set(MULTI_TERMINAL 1)
 CONFIGURE_FILE("src/config.h.cmake" "include/cdd/config.h")
 
 if (UCDD_WITH_TESTS)
-    include(cmake/doctest.cmake)
-    enable_testing()
+  include(cmake/doctest.cmake)
+  enable_testing()
 endif (UCDD_WITH_TESTS)
 
 include(cmake/xxhash.cmake)
 include(cmake/UUtils.cmake)
 include(cmake/UDBM.cmake)
-
-include_directories(
-    PRIVATE
-        # where the library itself will look for its internal headers
-        ${CMAKE_BINARY_DIR}/include
-    PUBLIC
-        # where top-level project will look for the library's public headers
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        # where external projects will look for the library's public headers
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
 
 if(STATIC)
     # The project does not use neither threads nor networking, but

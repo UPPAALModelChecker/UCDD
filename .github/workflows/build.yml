@@ -93,7 +93,7 @@ jobs:
           cmake --build $BUILD --config $CMAKE_BUILD_TYPE
           (cd $BUILD ; ctest -C $CMAKE_BUILD_TYPE)
       - name: Get dependencies
-        run: CMAKE_BUILD_TYPE=Release ./getlibs.sh
+        run: CMAKE_BUILD_TYPE=Release ./getlibs.sh $TARGET
       - name: Build with getlibs
         run: |
           BUILD=build-$TARGET-libs-$CMAKE_BUILD_TYPE

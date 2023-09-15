@@ -5,13 +5,13 @@ set -euo pipefail
 if [ $# -eq 0 ] ; then
   echo "Script $0 compiles and installs dependent libraries for a set of targets specified as arguments."
   echo "Possible arguments:"
-  echo "  linux64 win64 macos64"
+  toolchains=$(cd cmake/toolchain/ ; ls *.cmake)
+  for toolchain in $toolchains ; do
+    echo "  ${toolchain%%.cmake}"
+  done
   echo "The script is sensitive to CMake environment variables like:"
-  echo "  CMAKE_TOOLCHAIN_FILE CMAKE_BUILD_TYPE CMAKE_PREFIX_PATH"
-  machine=$(uname -m)
-  kernel=$(uname -s)
-  targets=${machine,,}-${kernel,,}
-  echo "Guessing target: $targets"
+  echo "   CMAKE_TOOLCHAIN_FILE CMAKE_BUILD_TYPE CMAKE_PREFIX_PATH"
+  exit 1
 else
   targets="$@"
 fi

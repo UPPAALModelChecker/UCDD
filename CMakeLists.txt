@@ -1,39 +1,28 @@
-cmake_minimum_required(VERSION 3.15)
-project(UCDD VERSION 0.2.1 LANGUAGES CXX C)
+cmake_minimum_required(VERSION 3.30)
+project(UCDD VERSION 0.2.2 LANGUAGES CXX C)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
-option(TESTING "Unit tests" OFF)
-option(ASAN "Address Sanitizer" OFF)
+option(UCDD_WITH_TESTS "UCDD Unit tests" ON)
+option(FIND_FATAL "Stop upon find_package errors" OFF)
+include(cmake/sanitizer.cmake)
 
 cmake_policy(SET CMP0048 NEW) # project() command manages VERSION variables
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(MULTI_TERMINAL 1)
 CONFIGURE_FILE("src/config.h.cmake" "include/cdd/config.h")
 
-if(CMAKE_TOOLCHAIN_FILE)
-    get_filename_component(TARGET ${CMAKE_TOOLCHAIN_FILE} NAME_WLE)
-    set(LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs-${TARGET}")
-else(CMAKE_TOOLCHAIN_FILE)
-    set(LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs")
-endif(CMAKE_TOOLCHAIN_FILE)
-message(STATUS "Using libs in ${LIBS_DIR}")
+if (UCDD_WITH_TESTS)
+  include(cmake/doctest.cmake)
+  enable_testing()
+endif (UCDD_WITH_TESTS)
 
-set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${LIBS_DIR}")
-find_package(xxHash 0.8.0 REQUIRED COMPONENTS xxhash PATHS ${LIBS_DIR}/xxHash)
-find_package(UUtils 1.1.1 REQUIRED PATHS ${LIBS_DIR}/UUtils)
-find_package(UDBM 2.0.11 REQUIRED PATHS ${LIBS_DIR}/UDBM)
-
-include_directories(
-    PRIVATE
-        # where the library itself will look for its internal headers
-        ${CMAKE_BINARY_DIR}/include
-    PUBLIC
-        # where top-level project will look for the library's public headers
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        # where external projects will look for the library's public headers
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
+include(cmake/xxhash.cmake)
+include(cmake/UUtils.cmake)
+include(cmake/UDBM.cmake)
 
 if(STATIC)
     # The project does not use neither threads nor networking, but
@@ -42,23 +31,15 @@ if(STATIC)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
 endif(STATIC)
 
-if (ASAN)
-    add_compile_options(-fno-omit-frame-pointer -fsanitize=address)
-    add_link_options(-fno-omit-frame-pointer -fsanitize=address)
-    message(STATUS "Using Address Sanitizer")
-endif(ASAN)
-
 add_subdirectory("src")
 
-if(TESTING)
-    enable_testing()
+if (UCDD_WITH_TESTS)
     add_subdirectory("test")
-endif(TESTING)
+endif(UCDD_WITH_TESTS)
 
-write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/UCDDConfigVersion.cmake VERSION ${PACKAGE_VERSION} COMPATIBILITY SameMajorVersion)
+write_basic_package_version_file(${PROJECT_BINARY_DIR}/UCDDConfigVersion.cmake VERSION ${PACKAGE_VERSION} COMPATIBILITY SameMajorVersion)
 
 install(DIRECTORY include DESTINATION .)
-install(TARGETS UCDD EXPORT UCDDConfig LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(EXPORT UCDDConfig DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/UCDD)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/UCDDConfigVersion.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/UCDD )
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/cdd/config.h DESTINATION include/cdd/)
+install(FILES ${PROJECT_BINARY_DIR}/UCDDConfigVersion.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/UCDD)
+install(FILES ${PROJECT_BINARY_DIR}/include/cdd/config.h DESTINATION include/cdd/)

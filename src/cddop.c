@@ -36,7 +36,7 @@
 #define P2 4256249
 
 #define COMPLHASH(r, op) (cdd_pair((uintptr_t)(r), (op)))
-//#define APPLYHASH(l,r,op)    (cdd_triple((unsigned int)(l), (unsigned int)(r),(op)))
+// #define APPLYHASH(l,r,op)    (cdd_triple((unsigned int)(l), (unsigned int)(r),(op)))
 #define APPLYHASH(l, r, op) ((((uintptr_t)(op) + (uintptr_t)(l)) * P1 + (uintptr_t)(r)) * P2)
 #define EXISTHASH(l)        ((uintptr_t)(l))
 #define REPLACEHASH(r)      ((uintptr_t)r)

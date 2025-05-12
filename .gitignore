@@ -6,10 +6,7 @@ build*
 cmake-build*
 
 # Getlibs
-/libs
-/libs-i686-linux
-/libs-x86_64-w64-mingw32
-/libs-i686-w64-mingw32
+local
 
 # Prerequisites
 *.d

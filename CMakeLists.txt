@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.30)
 project(UCDD VERSION 0.2.2 LANGUAGES CXX C)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
@@ -8,7 +8,7 @@ option(FIND_FATAL "Stop upon find_package errors" OFF)
 include(cmake/sanitizer.cmake)
 
 cmake_policy(SET CMP0048 NEW) # project() command manages VERSION variables
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)

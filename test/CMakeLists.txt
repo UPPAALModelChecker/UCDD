@@ -1,5 +1,3 @@
-# cdd tests...
-
 set(libs UCDD UDBM UUtils::udebug UUtils::hash UUtils::base)
 
 add_executable(test_cdd test_cdd.cpp)

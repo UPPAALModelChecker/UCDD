@@ -1,5 +1,4 @@
-#find_package(xxHash 0.8.0 CONFIG QUIET)
-set(XXHASH_VERSION_MINIMUM 0.8.0)
+set(XXHASH_VERSION_MINIMUM 0.8.3)
 find_file(XXHASH_PATH xxhash.h)
 if (XXHASH_PATH)
   cmake_path(GET XXHASH_PATH PARENT_PATH xxHash_DIR)
@@ -41,7 +40,7 @@ else(xxHash_FOUND)
   FetchContent_Declare(
     xxHash
     GIT_REPOSITORY https://github.com/Cyan4973/xxHash
-    GIT_TAG v0.8.2
+    GIT_TAG v0.8.3
     GIT_SHALLOW TRUE # get only the last commit version
     GIT_PROGRESS TRUE # show progress of download
     SOURCE_SUBDIR cmake_unofficial # CMakeLists.txt is not in the main folder
@@ -51,7 +50,7 @@ else(xxHash_FOUND)
     USES_TERMINAL_BUILD ON
     USES_TERMINAL_INSTALL ON
     )
-  FetchContent_GetProperties(xxHash)
+  FetchContent_MakeAvailable(xxHash)
   if (xxhash_POPULATED)
     message(STATUS "Found populated xxHash: ${xxhash_SOURCE_DIR}")
   else (xxhash_POPULATED)

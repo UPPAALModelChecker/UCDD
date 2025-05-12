@@ -34,7 +34,7 @@ else(doctest_FOUND)
             USES_TERMINAL_BUILD ON
             USES_TERMINAL_INSTALL ON
     )
-    FetchContent_GetProperties(doctest)
+    FetchContent_MakeAvailable(doctest)
     if (doctest_POPULATED)
         message(STATUS "Found populated doctest: ${doctest_SOURCE_DIR}")
     else (doctest_POPULATED)

@@ -13,7 +13,6 @@ For instance, in nine industrial examples the savings are on average 42% and wit
 
 **"Efficient Timed Reachability Analysis Using Clock Difference Diagrams"** by *Gerd Behrmann, Kim Guldstrand Larsen, Justin Pearson, Carsten Weise and Wang Yi*. "Computer Aided Verification, 11th International Conference, CAV'99", Trento, Italy, July 6-10, 1999, Proceedings. [[doi:10.1007/3-540-48683-6_30](https://doi.org/10.1007/3-540-48683-6_30)] [[bib](https://dblp.uni-trier.de/rec/conf/cav/BehrmannLPWY99.html?view=bibtex)]
 
-
 ## Compile
 The following packages need to be installed: `cmake`, `gcc`, `g++` and `ninja-build` or `make`.
 
@@ -24,7 +23,7 @@ Compile the source into `build` directory and run the unit tests:
 unset CMAKE_TOOLCHAIN_FILE # If it was set before
 cmake -B build
 cmake --build build
-(cd build ; ctest --output-on-failure)
+ctest --test-dir build --output-on-failure
 ```
 
 ## Reuse Dependencies
@@ -32,42 +31,45 @@ Use [getlibs.sh](getlibs.sh) script to build dependencies and install them into 
 ```shell
 unset CMAKE_TOOLCHAIN_FILE # If it was set before
 TARGET=x86_64-linux
-CMAKE_BUILD_TYPE=Release ./getlibs.sh $TARGET # installs dependencies
+CMAKE_BUILD_TYPE=Release ./getlibs.sh $TARGET # install dependencies
 BUILD=build-$TARGET-libs
 cmake -B $BUILD -DCMAKE_PREFIX_PATH=$PWD/local/$TARGET -DFIND_FATAL=ON
 cmake --build $BUILD
-(cd $BUILD; ctest --output-on-failure)
+ctest --test-dir $BUILD --output-on-failure
 ```
 For possible values of `TARGET` consult with `getlibs.sh` by running it or see the names of toolchain files in [cmake/toolchain](cmake/toolchain).
 
 ### Cross-compile For Linux 32-bit (i686):
 ```shell
 TARGET=i686-linux
-BUILD=build-$TARGET
+CMAKE_BUILD_TYPE=Release ./getlibs.sh $TARGET # install dependencies
+BUILD=build-$TARGET-libs
 export CMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchain/$TARGET.cmake 
-cmake -B $BUILD
+cmake -B $BUILD -DCMAKE_PREFIX_PATH=$PWD/local/$TARGET -DFIND_FATAL=ON
 cmake --build $BUILD
-(cd $BUILD ; ctest --output-on-failure)
+ctest --test-dir $BUILD --output-on-failure
 ```
 
 ### Cross-compile For Windows 64-bit (x64_86) using MinGW/[MSYS2](https://www.msys2.org/):
 ```shell
 TARGET=x86_64-w64-mingw32
-BUILD=build-$TARGET
+CMAKE_BUILD_TYPE=Release ./getlibs.sh $TARGET # install dependencies
+BUILD=build-$TARGET-libs
 export CMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchain/$TARGET.cmake
-cmake -B $BUILD -DSTATIC=ON
+cmake -B $BUILD -DCMAKE_PREFIX_PATH=$PWD/local/$TARGET -DFIND_FATAL=ON -DSTATIC=ON
 cmake --build $BUILD
-(cd $BUILD ; ctest --output-on-failure)
+ctest --test-dir $BUILD --output-on-failure
 ```
 
 ### Cross-compile For Windows 32-bit (i686) using MinGW/[MSYS2](https://www.msys2.org/):
 ```shell
 TARGET=i686-w64-mingw32
-BUILD=build-$TARGET
+CMAKE_BUILD_TYPE=Release ./getlibs.sh $TARGET # install dependencies
+BUILD=build-$TARGET-libs
 export CMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchain/$TARGET.cmake
-cmake -B $BUILD -DSTATIC=ON
+cmake -B $BUILD -DCMAKE_PREFIX_PATH=$PWD/local/$TARGET -DFIND_FATAL=ON -DSTATIC=ON
 cmake --build $BUILD
-(cd $BUILD ; ctest --output-on-failure)
+ctest --test-dir $BUILD --output-on-failure
 ```
 
 ## Debugging

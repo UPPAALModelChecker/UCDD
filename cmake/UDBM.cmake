@@ -1,4 +1,4 @@
-find_package(UDBM 2.0.14 QUIET)
+find_package(UDBM 2.0.15 QUIET)
 
 if (UDBM_FOUND)
   message(STATUS "Found UDBM: ${UDBM_DIR}")
@@ -12,7 +12,7 @@ else(UDBM_FOUND)
     FetchContent_Declare(
             UDBM
             GIT_REPOSITORY https://github.com/UPPAALModelChecker/UDBM.git
-            GIT_TAG v2.0.14
+            GIT_TAG v2.0.15
             GIT_SHALLOW TRUE # get only the last commit version
             GIT_PROGRESS TRUE # show progress of download
             # FIND_PACKAGE_ARGS NAMES doctest

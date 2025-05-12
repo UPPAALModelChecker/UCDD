@@ -1,4 +1,5 @@
-find_package(UUtils 2.0.5 COMPONENTS base hash debug QUIET)
+find_package(Boost 1.88 COMPONENTS headers math REQUIRED)
+find_package(UUtils 2.0.7 COMPONENTS base hash debug QUIET)
 
 if (UUtils_FOUND)
   message(STATUS "Found UUtils: ${UUtils_DIR}")

@@ -226,12 +226,12 @@ typedef struct
     int32_t diff;   /**< Encoding of clock1 - clock2 */
 } LevelInfo;
 
-#define cdd_difference_count(n) (((n) * ((n)-1)) >> 1)
+#define cdd_difference_count(n) (((n) * ((n) - 1)) >> 1)
 #define cdd_difference(c, d)    (cdd_difference_count(c) + (d))
-//#define CDD_DIFF(c,d) ((c) << 10 | (d))
-//#define CDD_CLOCK1(t) ((t) >> 10)
-//#define CDD_CLOCK2(t) ((t) & 0x3FF)
-//#define CDD_ISVALIDDIFF(t) (CDD_CLOCK1(t) < CDD_CLOCK2(t))
+// #define CDD_DIFF(c,d) ((c) << 10 | (d))
+// #define CDD_CLOCK1(t) ((t) >> 10)
+// #define CDD_CLOCK2(t) ((t) & 0x3FF)
+// #define CDD_ISVALIDDIFF(t) (CDD_CLOCK1(t) < CDD_CLOCK2(t))
 
 /**
  * @name Initialisation and Information
@@ -1167,7 +1167,7 @@ inline int32_t cdd_eval_false(const cdd& cdd) { return cdd_eval_false(cdd.root);
 #define cdd_interval cdd_intervalpp
 #define cdd_bddvar   cdd_bddvarpp
 #define cdd_bddnvar  cdd_bddnvarpp
-//#define cdd_nodecount cdd_nodecountpp
+// #define cdd_nodecount cdd_nodecountpp
 
 /** @} */
 

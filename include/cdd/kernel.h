@@ -30,12 +30,12 @@ extern "C" {
 #define bnd_upper(limit, strict) (((limit) << 1) | ((strict) ? 0 : 1))
 #define bnd_lower(limit, strict) (((limit) << 1) | ((strict) ? 1 : 0))
 #define bnd_get_limit(b)         ((b) >> 1)
-#define bnd_is_upper_strict(b)   (!((b)&0x1))
-#define bnd_is_lower_strict(b)   ((b)&0x1)
-#define bnd_add(a, b)            (((a) == INF || (b) == INF) ? INF : (((((a) & ~(0x1)) + ((b) & ~(0x1)))) | ((a) & (b)&0x1)))
-#define bnd_l2u(b)               ((b) == -INF ? INF : ((-((b) & ~(0x1))) | ((b)&0x1)) ^ 0x1)
-#define bnd_u2l(b)               ((b) == INF ? -INF : ((-((b) & ~(0x1))) | ((b)&0x1)) ^ 0x1)
-#define bnd_flip_strict(b)       ((b) == ((-((b) & ~(0x1))) | ((b)&0x1)) ^ 0x1)
+#define bnd_is_upper_strict(b)   (!((b) & 0x1))
+#define bnd_is_lower_strict(b)   ((b) & 0x1)
+#define bnd_add(a, b)            (((a) == INF || (b) == INF) ? INF : (((((a) & ~(0x1)) + ((b) & ~(0x1)))) | ((a) & (b) & 0x1)))
+#define bnd_l2u(b)               ((b) == -INF ? INF : ((-((b) & ~(0x1))) | ((b) & 0x1)) ^ 0x1)
+#define bnd_u2l(b)               ((b) == INF ? -INF : ((-((b) & ~(0x1))) | ((b) & 0x1)) ^ 0x1)
+#define bnd_flip_strict(b)       ((b) == ((-((b) & ~(0x1))) | ((b) & 0x1)) ^ 0x1)
 
 ///////////////////////////////////////////////////////////////////////////
 /// @defgroup kernel Internal interfaces
